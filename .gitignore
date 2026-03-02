@@ -1,0 +1,3 @@
+*.sql.gz
+*.sql.gz.gpg
+*.log
