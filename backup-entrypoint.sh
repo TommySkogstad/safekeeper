@@ -22,6 +22,9 @@ DB_USER="${DB_USER:-${PROJECT_NAME}}"
 
 BACKUP_ENCRYPTION_KEY="${BACKUP_ENCRYPTION_KEY:-}"
 
+# Fil-backup (valgfritt)
+FILES_DIR="${FILES_DIR:-}"
+
 # Hetzner StorageBox
 HETZNER_HOST="${HETZNER_HOST:-}"
 HETZNER_USER="${HETZNER_USER:-}"
@@ -147,6 +150,44 @@ run_backup() {
     log "Backup fullfort OK"
 }
 
+backup_files() {
+    if [[ -z "$FILES_DIR" ]] || [[ ! -d "$FILES_DIR" ]]; then
+        return 0
+    fi
+
+    local timestamp=$(date +%Y%m%d_%H%M%S)
+    local backup_file
+
+    if [[ -n "$BACKUP_ENCRYPTION_KEY" ]]; then
+        backup_file="${BACKUP_DIR}/${PROJECT_NAME}_files_${timestamp}.tar.gz.gpg"
+    else
+        backup_file="${BACKUP_DIR}/${PROJECT_NAME}_files_${timestamp}.tar.gz"
+    fi
+
+    log "Starter fil-backup av ${FILES_DIR}..."
+
+    if [[ -n "$BACKUP_ENCRYPTION_KEY" ]]; then
+        tar czf - -C "$(dirname "$FILES_DIR")" "$(basename "$FILES_DIR")" \
+            | gpg --batch --yes --symmetric --cipher-algo AES256 \
+                --passphrase "$BACKUP_ENCRYPTION_KEY" \
+            > "$backup_file"
+    else
+        tar czf "$backup_file" -C "$(dirname "$FILES_DIR")" "$(basename "$FILES_DIR")"
+    fi
+
+    local size=$(du -h "$backup_file" | cut -f1)
+    log "Fil-backup lagret lokalt: $backup_file ($size)"
+
+    # Last opp til Hetzner
+    upload_to_hetzner "$backup_file"
+
+    # Rydd opp gamle fil-backups
+    find "$BACKUP_DIR" -name "${PROJECT_NAME}_files_*.tar.gz" -mtime "+${BACKUP_RETENTION_DAYS}" -delete 2>/dev/null || true
+    find "$BACKUP_DIR" -name "${PROJECT_NAME}_files_*.tar.gz.gpg" -mtime "+${BACKUP_RETENTION_DAYS}" -delete 2>/dev/null || true
+
+    log "Fil-backup fullfort OK"
+}
+
 main() {
     log "=== Safekeeper Backup Service (${PROJECT_NAME}) ==="
     check_requirements
@@ -154,11 +195,13 @@ main() {
 
     if [[ "${1:-}" == "backup" ]]; then
         run_backup
+        backup_files
         exit 0
     fi
 
     log "Kjorer initial backup..."
     run_backup
+    backup_files
 
     log "Setter opp daglig backup: $BACKUP_SCHEDULE"
     echo "$BACKUP_SCHEDULE /usr/local/bin/backup-entrypoint.sh backup >> /var/log/backup.log 2>&1" > /etc/crontabs/root
