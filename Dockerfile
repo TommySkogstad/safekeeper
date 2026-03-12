@@ -4,7 +4,6 @@ RUN apk add --no-cache \
     bash \
     gzip \
     gnupg \
-    lftp \
     openssh-client \
     tzdata
 

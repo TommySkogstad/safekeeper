@@ -3,15 +3,26 @@
 Parametrisert Docker-image for PostgreSQL-backup med:
 - Lokal backup (NAS via bind mount)
 - Offsite backup til Hetzner StorageBox (SSH/SCP)
-- GPG-kryptering (AES256)
+- Obligatorisk GPG-kryptering (AES256)
+- SHA256 checksum-verifisering (lokalt og etter opplasting)
 - Automatisk opprydding (retention)
-- Restore-funksjonalitet
+- Retry-logikk for offsite-opplasting (3 forsok, eksponentiell backoff)
+- Restore-funksjonalitet med checksum-validering
 
 Alt styres via miljovariabler - ingen prosjektspesifikk kode.
 
-## Miljøvariabler
+## Sikkerhet
 
-| Variabel | Beskrivelse | Default | Påkrevd |
+- **Kryptering**: Obligatorisk GPG AES256 — backup feiler hvis nokkel mangler
+- **Passord**: Overleveres via `.pgpass`-fil (ikke synlig i prosessliste)
+- **GPG-passphrase**: Via file descriptor (ikke synlig i `ps`)
+- **SSH**: `StrictHostKeyChecking=accept-new` (TOFU-modell)
+- **Filpermisjon**: `chmod 600` pa alle backup-filer og checksum-filer
+- **Cleanup**: Sensitive filer (SSH-nokkel, pgpass) ryddes opp via trap ved avslutning
+
+## Miljovariabler
+
+| Variabel | Beskrivelse | Default | Pakrevd |
 |----------|-------------|---------|---------|
 | `PROJECT_NAME` | Brukes i filnavn og logging | - | Ja |
 | `DB_HOST` | Database-host | `postgres` | Nei |
@@ -22,7 +33,8 @@ Alt styres via miljovariabler - ingen prosjektspesifikk kode.
 | `BACKUP_DIR` | Lokal backup-katalog | `/backups` | Nei |
 | `BACKUP_SCHEDULE` | Cron-uttrykk | `0 5 * * *` | Nei |
 | `BACKUP_RETENTION_DAYS` | Dager a beholde backups | `30` | Nei |
-| `BACKUP_ENCRYPTION_KEY` | GPG-krypteringsnokkel | (tom = ingen) | Nei |
+| `BACKUP_ENCRYPTION_KEY` | GPG-krypteringsnokkel (AES256) | - | Ja |
+| `FILES_DIR` | Katalog for fil-backup | (tom = deaktivert) | Nei |
 | `HETZNER_HOST` | Hetzner StorageBox hostname | (tom = deaktivert) | Nei |
 | `HETZNER_USER` | Hetzner StorageBox brukernavn | (tom) | Nei |
 | `HETZNER_PORT` | Hetzner SSH-port | `23` | Nei |
@@ -37,7 +49,7 @@ backup:
     dockerfile: Dockerfile
   restart: unless-stopped
   healthcheck:
-    test: ["CMD-SHELL", "pgrep -f backup-entrypoint || exit 1"]
+    test: ["CMD-SHELL", "test -f /tmp/last-backup-success && [ $(($(date +%s) - $(cat /tmp/last-backup-success))) -lt 93600 ]"]
     interval: 60s
     timeout: 10s
     retries: 3
@@ -52,7 +64,7 @@ backup:
     BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
     BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-0 3 * * *}
     BACKUP_DIR: /backups
-    BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:-}
+    BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:?Sett BACKUP_ENCRYPTION_KEY i .env}
     HETZNER_HOST: ${HETZNER_HOST:-}
     HETZNER_USER: ${HETZNER_USER:-}
     HETZNER_PORT: ${HETZNER_PORT:-23}
@@ -66,6 +78,8 @@ backup:
   networks:
     - internal
 ```
+
+**Healthcheck**: Sjekker at siste backup var vellykket innen 26 timer (93600 sekunder). Containeren rapporterer `unhealthy` hvis backup ikke har kjort.
 
 ## Hetzner StorageBox oppsett
 
@@ -120,6 +134,8 @@ docker compose -f docker-compose.tunnel.yml exec backup restore.sh --list
 docker compose -f docker-compose.tunnel.yml exec backup restore.sh /backups/mittprosjekt_20260302_030000.sql.gz.gpg
 ```
 
+Restore verifiserer SHA256-checksum automatisk hvis `.sha256`-fil finnes.
+
 ## Kryptering
 
 Generer nokkel:
@@ -127,4 +143,16 @@ Generer nokkel:
 openssl rand -base64 32
 ```
 
-Sett `BACKUP_ENCRYPTION_KEY` i `.env`. Lagre nokkelen sikkert utenfor systemet!
+Sett `BACKUP_ENCRYPTION_KEY` i `.env`.
+
+**VIKTIG**: Lagre krypteringsnokkelen sikkert utenfor systemet! Uten nokkelen kan backups ikke dekrypteres. Anbefalte steder:
+- Passordbehandler (Bitwarden, 1Password)
+- Fysisk notat i safe
+- Ikke kun i `.env` — den er pa samme server som backupene
+
+## CI/CD
+
+GitHub Actions kjorer automatisk ved push/PR:
+1. **ShellCheck** — Linter bash-scripts
+2. **Hadolint** — Linter Dockerfile
+3. **Docker Build** — Verifiserer at image bygges
