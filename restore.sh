@@ -51,7 +51,7 @@ usage() {
 
 list_backups() {
     log "Tilgjengelige backups i ${BACKUP_DIR} (${PROJECT_NAME}):"
-    ls -lh "${BACKUP_DIR}"/${PROJECT_NAME}_*.sql.gz* 2>/dev/null || log "Ingen backups funnet."
+    ls -lh "${BACKUP_DIR}/${PROJECT_NAME}"_*.sql.gz* 2>/dev/null || log "Ingen backups funnet."
 }
 
 restore_backup() {

@@ -88,6 +88,7 @@ upload_to_hetzner() {
     for part in "${path_parts[@]}"; do
         [[ -z "$part" ]] && continue
         current_path="${current_path:+${current_path}/}${part}"
+        # shellcheck disable=SC2086,SC2029
         ssh ${SSH_OPTS} "${HETZNER_USER}@${HETZNER_HOST}" "mkdir \"${current_path}\"" 2>/dev/null || true
     done
 
@@ -102,6 +103,7 @@ upload_to_hetzner() {
 
         # Verifiser checksum pa Hetzner
         local remote_sha256
+        # shellcheck disable=SC2086,SC2029
         remote_sha256=$(ssh ${SSH_OPTS} "${HETZNER_USER}@${HETZNER_HOST}" \
             "sha256sum ${HETZNER_BACKUP_PATH}/${filename}" 2>/dev/null | cut -d' ' -f1 || echo "")
 
@@ -127,11 +129,13 @@ cleanup_hetzner() {
     cutoff_ts=$(date -d "-${BACKUP_RETENTION_DAYS} days" +%Y%m%d 2>/dev/null || date -v-"${BACKUP_RETENTION_DAYS}"d +%Y%m%d 2>/dev/null || echo "")
     [[ -z "$cutoff_ts" ]] && return 0
 
+    # shellcheck disable=SC2086,SC2029
     ssh ${SSH_OPTS} "${HETZNER_USER}@${HETZNER_HOST}" "ls ${HETZNER_BACKUP_PATH}" 2>/dev/null | while read -r remote_file; do
         local file_date
         file_date=$(echo "$remote_file" | grep -oP "${PROJECT_NAME}_\K[0-9]{8}" || echo "")
         if [[ -n "$file_date" ]] && [[ "$file_date" < "$cutoff_ts" ]]; then
             log "Sletter gammel offsite backup: $remote_file"
+            # shellcheck disable=SC2086,SC2029
             ssh ${SSH_OPTS} "${HETZNER_USER}@${HETZNER_HOST}" \
                 "rm \"${HETZNER_BACKUP_PATH}/${remote_file}\"" 2>/dev/null || true
         fi
@@ -197,9 +201,9 @@ upload_with_retry() {
     local max_retries=3
     local retry_delay=5
 
-    for attempt in $(seq 1 $max_retries); do
+    for attempt in $(seq 1 "$max_retries"); do
         upload_to_hetzner "$backup_file" && return 0
-        if [[ $attempt -lt $max_retries ]]; then
+        if [[ $attempt -lt "$max_retries" ]]; then
             log "Hetzner-opplasting feilet (forsok $attempt/$max_retries). Prover igjen om ${retry_delay}s..."
             sleep $retry_delay
             retry_delay=$((retry_delay * 2))
