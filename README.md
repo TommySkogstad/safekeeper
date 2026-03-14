@@ -1,4 +1,8 @@
-# Safekeeper
+<p align="center">
+  <img src="logo.svg" alt="Safekeeper" width="80" height="80">
+</p>
+
+<h1 align="center">Safekeeper</h1>
 
 Parametrisert Docker-image for PostgreSQL-backup med:
 - Lokal backup (NAS via bind mount)
