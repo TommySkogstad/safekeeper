@@ -1,0 +1,56 @@
+name: Issue-varsling
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kategoriser og varsle
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+          ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          # Kategoriser basert på innhold
+          TITLE_LOWER=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]')
+          BODY_LOWER=$(echo "$ISSUE_BODY" | tr '[:upper:]' '[:lower:]')
+          COMBINED="$TITLE_LOWER $BODY_LOWER"
+
+          if echo "$COMBINED" | grep -qiE 'feil|bug|crash|error|virker ikke|fungerer ikke|broken|fix'; then
+            CATEGORY="🐛 BUG"
+          elif echo "$COMBINED" | grep -qiE 'endre|legg til|ny |nytt |feature|forbedring|ønske|ønsker'; then
+            CATEGORY="✨ FEATURE"
+          else
+            CATEGORY="📋 ISSUE"
+          fi
+
+          # Sjekk Lisa-label
+          PRIORITY=3
+          TAGS="issue"
+          if echo "$ISSUE_LABELS" | grep -qi "lisa"; then
+            PRIORITY=4
+            TAGS="issue,star"
+            CATEGORY="⭐ LISA: $CATEGORY"
+          fi
+
+          # Send ntfy-varsling
+          curl -s \
+            -u "${{ secrets.NTFY_CREDS }}" \
+            -H "Title: $REPO_NAME #$ISSUE_NUMBER: $ISSUE_TITLE" \
+            -H "Priority: $PRIORITY" \
+            -H "Tags: $TAGS" \
+            -H "Click: $ISSUE_URL" \
+            -H "Actions: view, Åpne issue, $ISSUE_URL" \
+            -d "$CATEGORY fra $ISSUE_AUTHOR
+
+          $ISSUE_TITLE
+
+          $ISSUE_URL" \
+            "https://ntfy.tommytv.no/github"
