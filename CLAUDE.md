@@ -167,7 +167,6 @@ GitHub Actions (`issue-notify.yml`) sender push-varsling ved nye issues:
 - Kategoriserer issues som BUG, FEATURE eller ISSUE basert pa nokkelord i tittel/body
 - BUG-nokkelord: feil, bug, crash, error, virker ikke, broken, fix
 - FEATURE-nokkelord: endre, legg til, ny, feature, forbedring, onske
-- Issues med Lisa-label far hoy prioritet (priority 4) og stjernemerke
 - Varsler sendes til `ntfy.tommytv.no/github` med klikkbar lenke til issuet
 
 ```bash

@@ -31,14 +31,8 @@ jobs:
             CATEGORY="📋 ISSUE"
           fi
 
-          # Sjekk Lisa-label
           PRIORITY=3
           TAGS="issue"
-          if echo "$ISSUE_LABELS" | grep -qi "lisa"; then
-            PRIORITY=4
-            TAGS="issue,star"
-            CATEGORY="⭐ LISA: $CATEGORY"
-          fi
 
           # Send ntfy-varsling
           curl -s \

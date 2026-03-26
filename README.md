@@ -160,4 +160,4 @@ GitHub Actions kjorer automatisk ved push/PR:
 1. **ShellCheck** — Linter bash-scripts
 2. **Hadolint** — Linter Dockerfile
 3. **Docker Build** — Verifiserer at image bygges
-4. **Issue-varsling** — Sender ntfy push-varsel ved nye issues (kategoriserer BUG/FEATURE, Lisa-label gir hoy prioritet)
+4. **Issue-varsling** — Sender ntfy push-varsel ved nye issues (kategoriserer BUG/FEATURE)
