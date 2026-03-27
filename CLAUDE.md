@@ -231,6 +231,10 @@ backup:
 | 6810 | `/mnt/nas-apps/6810/backups` | Venter pa opprettelse | `0 5 * * *` |
 | summa-summarum | `/mnt/nas-apps/summa-summarum/backups` | Venter pa opprettelse | `0 5 * * *` |
 
+### Kryssrepo-avhengigheter
+
+Safekeeper er et delt bibliotek/image som brukes av alle Kotlin-appene. Naar ny funksjonalitet legges til, opprett GitHub issue paa safekeeper FORST, deretter issues paa alle apper som skal bruke endringen med `Blokkert av: TommySkogstad/safekeeper#nummer` i issue-bodyen. Issue-triage haandterer avhengighetsrekkefoelgen automatisk.
+
 ### Forutsetninger
 
 - Safekeeper-repoet klones til `~/git/safekeeper` pa serveren
