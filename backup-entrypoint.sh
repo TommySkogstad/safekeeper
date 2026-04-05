@@ -66,7 +66,7 @@ check_requirements() {
 }
 
 hetzner_configured() {
-    [[ -n "$HETZNER_HOST" ]] && [[ -n "$HETZNER_USER" ]] && [[ -f "$SSH_KEY" ]]
+    [[ -n "$HETZNER_HOST" ]] && [[ -n "$HETZNER_USER" ]] && [[ -s "$SSH_KEY" ]]
 }
 
 upload_to_hetzner() {
@@ -96,26 +96,27 @@ upload_to_hetzner() {
     local local_sha256
     local_sha256=$(sha256sum "$backup_file" | cut -d' ' -f1)
 
-    if scp -P "${HETZNER_PORT}" -i "${SSH_KEY}" \
+    if ! scp -P "${HETZNER_PORT}" -i "${SSH_KEY}" \
         -o StrictHostKeyChecking=accept-new -o BatchMode=yes \
         "${backup_file}" \
         "${HETZNER_USER}@${HETZNER_HOST}:${HETZNER_BACKUP_PATH}/${filename}"; then
-
-        # Verifiser checksum pa Hetzner
-        local remote_sha256
-        # shellcheck disable=SC2086,SC2029
-        remote_sha256=$(ssh ${SSH_OPTS} "${HETZNER_USER}@${HETZNER_HOST}" \
-            "sha256sum ${HETZNER_BACKUP_PATH}/${filename}" 2>/dev/null | cut -d' ' -f1 || echo "")
-
-        if [[ "$local_sha256" == "$remote_sha256" ]]; then
-            log "Offsite backup lastet opp og verifisert: ${HETZNER_BACKUP_PATH}/${filename}"
-        elif [[ -z "$remote_sha256" ]]; then
-            log "ADVARSEL: Kunne ikke verifisere checksum pa Hetzner (sha256sum utilgjengelig)"
-        else
-            log "ADVARSEL: Checksum-mismatch etter opplasting! Lokal=$local_sha256 Remote=$remote_sha256"
-        fi
-    else
         log "ADVARSEL: Opplasting til Hetzner feilet - lokal backup er intakt"
+        return 1
+    fi
+
+    # Verifiser checksum pa Hetzner
+    local remote_sha256
+    # shellcheck disable=SC2086,SC2029
+    remote_sha256=$(ssh ${SSH_OPTS} "${HETZNER_USER}@${HETZNER_HOST}" \
+        "sha256sum ${HETZNER_BACKUP_PATH}/${filename}" 2>/dev/null | cut -d' ' -f1 || echo "")
+
+    if [[ "$local_sha256" == "$remote_sha256" ]]; then
+        log "Offsite backup lastet opp og verifisert: ${HETZNER_BACKUP_PATH}/${filename}"
+    elif [[ -z "$remote_sha256" ]]; then
+        log "ADVARSEL: Kunne ikke verifisere checksum pa Hetzner (sha256sum utilgjengelig)"
+    else
+        log "ADVARSEL: Checksum-mismatch etter opplasting! Lokal=$local_sha256 Remote=$remote_sha256"
+        return 1
     fi
 }
 
@@ -268,7 +269,10 @@ main() {
     backup_files
 
     log "Setter opp daglig backup: $BACKUP_SCHEDULE"
-    echo "$BACKUP_SCHEDULE /usr/local/bin/backup-entrypoint.sh backup >> /var/log/backup.log 2>&1" > /etc/crontabs/root
+    # Eksporter miljovariabler til fil for cron (BusyBox crond arver ikke Docker env)
+    env | grep -E '^(PROJECT_NAME|DB_|BACKUP_|FILES_DIR|HETZNER_|TZ)=' | sed 's/^\(.*\)$/export \1/' > /etc/safekeeper.env
+    chmod 600 /etc/safekeeper.env
+    echo "$BACKUP_SCHEDULE . /etc/safekeeper.env; /usr/local/bin/backup-entrypoint.sh backup >> /var/log/backup.log 2>&1" > /etc/crontabs/root
 
     log "Starter cron daemon..."
     exec crond -f -l 2
