@@ -183,6 +183,8 @@ run_backup() {
 
     # Last opp til Hetzner StorageBox (offsite) med retry
     upload_with_retry "$backup_file"
+    # Last opp checksum-fil til Hetzner
+    upload_with_retry "${backup_file}.sha256"
 
     # Slett lokale backups eldre enn BACKUP_RETENTION_DAYS
     find "$BACKUP_DIR" -name "${PROJECT_NAME}_*.sql.gz.gpg" -mtime "+${BACKUP_RETENTION_DAYS}" -delete 2>/dev/null || true
@@ -230,6 +232,13 @@ backup_files() {
         > "$backup_file"
     chmod 600 "$backup_file"
 
+    # Verifiser at fil-backup er gyldig (dekrypterings-test)
+    if ! gpg --batch --yes --decrypt \
+        --passphrase-fd 3 3< <(printf '%s' "$BACKUP_ENCRYPTION_KEY") \
+        < "$backup_file" | tar tzf - > /dev/null 2>&1; then
+        error "Fil-backup-verifisering feilet! Kryptert arkiv kan ikke dekrypteres/pakkes ut."
+    fi
+
     local size
     size=$(du -h "$backup_file" | cut -f1)
 
@@ -241,6 +250,8 @@ backup_files() {
 
     # Last opp til Hetzner med retry
     upload_with_retry "$backup_file"
+    # Last opp checksum-fil til Hetzner
+    upload_with_retry "${backup_file}.sha256"
 
     # Rydd opp gamle fil-backups
     find "$BACKUP_DIR" -name "${PROJECT_NAME}_files_*.tar.gz.gpg" -mtime "+${BACKUP_RETENTION_DAYS}" -delete 2>/dev/null || true
