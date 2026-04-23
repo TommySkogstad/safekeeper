@@ -15,6 +15,7 @@ PROJECT_NAME="${PROJECT_NAME:?Manglende miljovariabel: PROJECT_NAME}"
 BACKUP_DIR="${BACKUP_DIR:-/backups}"
 BACKUP_SCHEDULE="${BACKUP_SCHEDULE:-0 5 * * *}"
 BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
+BACKUP_SUCCESS_FILE="${BACKUP_SUCCESS_FILE:-/tmp/last-backup-success}"
 
 DB_HOST="${DB_HOST:-postgres}"
 DB_PORT="${DB_PORT:-5432}"
@@ -196,7 +197,7 @@ run_backup() {
     cleanup_hetzner
 
     log "Backup fullfort OK"
-    date +%s > /tmp/last-backup-success
+    date +%s > "$BACKUP_SUCCESS_FILE"
 }
 
 upload_with_retry() {
@@ -260,7 +261,7 @@ backup_files() {
     find "$BACKUP_DIR" -name "${PROJECT_NAME}_files_*.tar.gz" -not -name "*.gpg" -mtime "+${BACKUP_RETENTION_DAYS}" -delete 2>/dev/null || true
 
     log "Fil-backup fullfort OK"
-    date +%s > /tmp/last-backup-success
+    date +%s > "$BACKUP_SUCCESS_FILE"
 }
 
 main() {

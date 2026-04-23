@@ -1,0 +1,5 @@
+#!/bin/bash
+# Stub for pg_isready. Ignorer alle argumenter.
+# Returnerer 1 hvis STUB_PGISREADY_FAIL=1, ellers 0.
+[[ "${STUB_PGISREADY_FAIL:-0}" == "1" ]] && exit 1
+exit 0
