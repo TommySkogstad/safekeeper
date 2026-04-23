@@ -1,0 +1,4 @@
+#!/bin/bash
+# Stub for sleep. Returnerer umiddelbart for aa unngaa heng i
+# pg_isready-until-loop ved fail-scenarier i tester.
+exit 0

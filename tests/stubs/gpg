@@ -1,0 +1,15 @@
+#!/bin/bash
+# Stub for gpg. Pipe stdin direkte til stdout — fungerer for baade
+# --symmetric (krypter) og --decrypt siden ekte gzip ligger i pipelinen.
+# Returnerer 1 hvis STUB_GPG_FAIL=1.
+#
+# Lukker fd 3 eksplisitt for aa unngaa at process substitution
+# (--passphrase-fd 3 3< <(printf ...)) henger paa blokkert pipe.
+
+# Lukk fd 3 hvis den er aapen
+exec 3<&- 2>/dev/null || true
+
+[[ "${STUB_GPG_FAIL:-0}" == "1" ]] && exit 1
+
+# Passthrough: stdin -> stdout
+cat

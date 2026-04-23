@@ -25,8 +25,26 @@ bats tests/
 tests/
   run.sh                     # Wrapper for lokal kjøring
   helpers/
-    common.bash              # Felles oppsett (SAFEKEEPER_ROOT osv.)
+    common.bash              # Felles oppsett (SAFEKEEPER_ROOT, setup_stubs)
+  stubs/
+    pg_isready               # Stub for PostgreSQL-helsesjekk
+    pg_dump                  # Stub som skriver dummy-SQL til stdout
+    gpg                      # Stub som pipe-through stdin (virker for --symmetric og --decrypt)
+    sleep                    # Stub som returnerer umiddelbart
   check_requirements.bats    # Tester for manglende miljøvariabler
+  run_backup.bats            # Tester for happy-path backup-flyt
 ```
 
-Flere testfiler, stub-binærer for `gpg`/`pg_dump`/`scp`/`ssh` og CI-integrasjon legges til i oppfølgende issues (se #4).
+## Stubs og scenariovariasjon
+
+Stub-binærene i `tests/stubs/` prependes til `PATH` via `setup_stubs()` i `helpers/common.bash`. De støtter scenariovariasjon via miljøvariabler:
+
+| Variabel | Effekt |
+|----------|--------|
+| `STUB_GPG_FAIL=1` | `gpg` returnerer 1 |
+| `STUB_PGDUMP_FAIL=1` | `pg_dump` returnerer 1 |
+| `STUB_PGISREADY_FAIL=1` | `pg_isready` returnerer 1 |
+
+For testisolasjon kan `BACKUP_SUCCESS_FILE` settes til en mktemp-sti i stedet for den hardkodede `/tmp/last-backup-success`.
+
+Flere testfiler for `restore.sh` og Hetzner-retry-logikk, samt CI-integrasjon, legges til i oppfølgende issues (se #4).
