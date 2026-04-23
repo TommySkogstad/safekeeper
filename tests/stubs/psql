@@ -1,0 +1,7 @@
+#!/bin/bash
+# Stub for psql. Konsumerer stdin slik at pipelines ikke henger.
+# Ignorer alle argumenter (inkludert PGPASSFILE og --single-transaction).
+# Returnerer 1 hvis STUB_PSQL_FAIL=1.
+[[ "${STUB_PSQL_FAIL:-0}" == "1" ]] && { cat > /dev/null; exit 1; }
+cat > /dev/null
+exit 0
