@@ -35,3 +35,12 @@ teardown() {
     [ "$status" -ne 0 ]
     [[ "$output" == *"BACKUP_ENCRYPTION_KEY"* ]]
 }
+
+@test "backup feiler hvis BACKUP_ENCRYPTION_KEY er tom streng" {
+    export PROJECT_NAME=testprosjekt
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=""
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"BACKUP_ENCRYPTION_KEY"* ]]
+}
