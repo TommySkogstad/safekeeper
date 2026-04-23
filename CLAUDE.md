@@ -154,9 +154,10 @@ GitHub Actions (`build.yml`) kjorer automatisk ved push og pull request:
 |------|----------|-------------|
 | ShellCheck | `ludeeus/action-shellcheck` | Linter alle bash-skript |
 | Hadolint | `hadolint/hadolint-action` | Linter Dockerfile |
+| BATS | `bats-core/bats-action` | Kjorer integrasjonstester |
 | Docker Build | `docker/build-push-action` | Verifiserer at image bygges (push: false) |
 
-Docker Build kjorer forst etter at ShellCheck og Hadolint er godkjent (`needs: [shellcheck, hadolint]`).
+Docker Build kjorer forst etter at ShellCheck, Hadolint og BATS er godkjent (`needs: [shellcheck, hadolint, bats]`).
 
 GitHub Actions (`issue-notify.yml`) sender push-varsling ved nye issues:
 
