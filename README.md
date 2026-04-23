@@ -154,6 +154,14 @@ Sett `BACKUP_ENCRYPTION_KEY` i `.env`.
 - Fysisk notat i safe
 - Ikke kun i `.env` — den er pa samme server som backupene
 
+## Testing
+
+Integrasjonstester for `backup-entrypoint.sh` og `restore.sh` basert på [BATS](https://github.com/bats-core/bats-core). Se [tests/README.md](tests/README.md) for installasjon og detaljer.
+
+```bash
+./tests/run.sh
+```
+
 ## CI/CD
 
 GitHub Actions kjorer automatisk ved push/PR:

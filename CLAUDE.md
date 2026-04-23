@@ -185,6 +185,7 @@ gh run list --repo TommySkogstad/safekeeper --limit 5
 - **Retention**: Gamle backups slettes automatisk bade lokalt og pa Hetzner etter `BACKUP_RETENTION_DAYS`.
 - **Initial backup**: Ved oppstart kjores en backup umiddelbart for cron settes opp.
 - **Linting**: ShellCheck for bash, Hadolint for Dockerfile. Begge ma passere i CI.
+- **Integrasjonstester**: BATS-tester for `backup-entrypoint.sh` og `restore.sh`. Se `tests/README.md` for detaljer og kjøring av tester lokalt.
 
 ## Integrasjon med andre apper
 
