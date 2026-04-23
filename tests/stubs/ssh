@@ -1,0 +1,8 @@
+#!/bin/bash
+# Stub for ssh. Ignorer alle argumenter og returnerer 0 med tom stdout.
+# Dette treffer mkdir-loopen i upload_to_hetzner (som ignorerer feil),
+# samt sha256sum-verifiseringen (tom stdout -> remote_sha256 blir tom og
+# funksjonen logger advarsel, men returnerer 0).
+# Returnerer 1 hvis STUB_SSH_FAIL=1.
+[[ "${STUB_SSH_FAIL:-0}" == "1" ]] && exit 1
+exit 0
