@@ -1,0 +1,58 @@
+name: Auto-merge
+
+# Aktiver GitHub native auto-merge paa kvalifiserte PR-er. PR-en mergees
+# automatisk naar branch-protection-krav (CI groenn) er oppfylt.
+#
+# Kvalifiserer (alle ikke-draft PR-er fra disse kildene):
+# - Dependabot-PR-er (alle versjon-bumps som passerer CI)
+# - Auto-flow-branches: `auto/*` (issue-triage, dependabot-weekly)
+# - Manuelle vedlikeholds-branches: `fix/*`, `feat/*`, `chore/*`, `ci/*`,
+#   `docs/*`, `refactor/*`, `test/*`, `perf/*`, `style/*`, `build/*`
+#
+# Disse prefiksene er valgt fordi de signaliserer "rutinemessig vedlikehold
+# klar for merge naar groenn". Branches uten kjent prefiks (f.eks.
+# `experiment/*`, `wip/*`, eller bare et navn) merges ikke automatisk —
+# det krever bevisst manuell `gh pr merge`.
+#
+# "Allow auto-merge" maa vaere enablet i repo-settings (gh repo edit
+# --enable-auto-merge), og main maa ha branch-protection med required
+# status checks for at native auto-merge skal kunne koe opp.
+
+on:
+  pull_request_target:
+    types: [opened, reopened, ready_for_review, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable-auto-merge:
+    if: |
+      github.event.pull_request.draft == false && (
+        github.actor == 'dependabot[bot]' ||
+        startsWith(github.head_ref, 'auto/') ||
+        startsWith(github.head_ref, 'fix/') ||
+        startsWith(github.head_ref, 'feat/') ||
+        startsWith(github.head_ref, 'chore/') ||
+        startsWith(github.head_ref, 'ci/') ||
+        startsWith(github.head_ref, 'docs/') ||
+        startsWith(github.head_ref, 'refactor/') ||
+        startsWith(github.head_ref, 'test/') ||
+        startsWith(github.head_ref, 'perf/') ||
+        startsWith(github.head_ref, 'style/') ||
+        startsWith(github.head_ref, 'build/')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+        run: |
+          echo "Enabling auto-merge for PR #${PR_NUM} (actor=${{ github.actor }}, branch=${{ github.head_ref }})"
+          # `--auto` koer opp merge naar branch-protection-krav er oppfylt.
+          # Hvis ingen branch-protection finnes, faller vi tilbake til umiddelbar
+          # merge (forutsatt at PR er mergeable og CI groenn akkurat naa).
+          gh pr merge "$PR_NUM" --auto --merge --delete-branch \
+            || gh pr merge "$PR_NUM" --merge --delete-branch
