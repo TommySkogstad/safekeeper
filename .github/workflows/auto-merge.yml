@@ -49,10 +49,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUM: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
         run: |
           echo "Enabling auto-merge for PR #${PR_NUM} (actor=${{ github.actor }}, branch=${{ github.head_ref }})"
+          # --repo flagget gjor at gh ikke trenger en lokal git checkout. Uten
+          # det feilet workflowen tidligere med "not a git repository" siden
+          # vi ikke kjorer actions/checkout (unodig for ren API-operasjon).
           # `--auto` koer opp merge naar branch-protection-krav er oppfylt.
           # Hvis ingen branch-protection finnes, faller vi tilbake til umiddelbar
           # merge (forutsatt at PR er mergeable og CI groenn akkurat naa).
-          gh pr merge "$PR_NUM" --auto --merge --delete-branch \
-            || gh pr merge "$PR_NUM" --merge --delete-branch
+          gh pr merge "$PR_NUM" --repo "$REPO" --auto --merge --delete-branch \
+            || gh pr merge "$PR_NUM" --repo "$REPO" --merge --delete-branch
