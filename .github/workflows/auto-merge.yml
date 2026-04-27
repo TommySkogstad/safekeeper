@@ -41,7 +41,8 @@ jobs:
         startsWith(github.head_ref, 'test/') ||
         startsWith(github.head_ref, 'perf/') ||
         startsWith(github.head_ref, 'style/') ||
-        startsWith(github.head_ref, 'build/')
+        startsWith(github.head_ref, 'build/') ||
+        startsWith(github.head_ref, 'revert/')
       )
     runs-on: ubuntu-latest
     steps:
