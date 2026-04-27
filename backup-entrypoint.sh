@@ -24,6 +24,10 @@ DB_USER="${DB_USER:-${PROJECT_NAME}}"
 
 BACKUP_ENCRYPTION_KEY="${BACKUP_ENCRYPTION_KEY:-}"
 
+# Interne fil-stier (kan overstyres i tester via env-variabler)
+SAFEKEEPER_ENV_FILE="${SAFEKEEPER_ENV_FILE:-/etc/safekeeper.env}"
+CRONTAB_FILE="${CRONTAB_FILE:-/etc/crontabs/root}"
+
 # Fil-backup (valgfritt)
 FILES_DIR="${FILES_DIR:-}"
 
@@ -282,9 +286,9 @@ main() {
 
     log "Setter opp daglig backup: $BACKUP_SCHEDULE"
     # Eksporter miljovariabler til fil for cron (BusyBox crond arver ikke Docker env)
-    env | grep -E '^(PROJECT_NAME|DB_|BACKUP_|FILES_DIR|HETZNER_|TZ)=' | sed 's/^\(.*\)$/export \1/' > /etc/safekeeper.env
-    chmod 600 /etc/safekeeper.env
-    echo "$BACKUP_SCHEDULE . /etc/safekeeper.env; /usr/local/bin/backup-entrypoint.sh backup >> /var/log/backup.log 2>&1" > /etc/crontabs/root
+    env | grep -E '^(PROJECT_NAME|DB_|BACKUP_|FILES_DIR|HETZNER_|TZ)[^=]*=' | sed 's/^\(.*\)$/export \1/' > "$SAFEKEEPER_ENV_FILE"
+    chmod 600 "$SAFEKEEPER_ENV_FILE"
+    echo "$BACKUP_SCHEDULE . $SAFEKEEPER_ENV_FILE; /usr/local/bin/backup-entrypoint.sh backup >> /var/log/backup.log 2>&1" > "$CRONTAB_FILE"
 
     log "Starter cron daemon..."
     exec crond -f -l 2

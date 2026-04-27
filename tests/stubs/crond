@@ -1,0 +1,4 @@
+#!/bin/bash
+# Stub for crond. Avslutter umiddelbart slik at tester kan inspisere
+# /etc/crontabs/root og /etc/safekeeper.env etter cron-oppsett.
+exit 0
