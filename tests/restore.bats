@@ -92,6 +92,15 @@ teardown() {
     [[ "$output" == *"Checksum-verifisering feilet"* ]]
 }
 
+@test "restore.sh feiler hvis maalmappe ikke finnes" {
+    export BACKUP_ENCRYPTION_KEY=testnokkel
+    local backup_file="$BACKUP_DIR/testprosjekt_files_20260101_120000.tar.gz.gpg"
+    echo "dummy" > "$backup_file"
+    run bash "$SAFEKEEPER_ROOT/restore.sh" "$backup_file" "/finnes/ikke/2026"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Maalmappe finnes ikke"* ]]
+}
+
 @test "restore.sh gjenoppretter fil-backup til maalmappe" {
     export BACKUP_ENCRYPTION_KEY=testnokkel
     local target_dir

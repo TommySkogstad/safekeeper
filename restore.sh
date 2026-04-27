@@ -81,6 +81,9 @@ restore_files() {
     local backup_file="$1"
     local target_dir="${2:-${FILES_DIR:-.}}"
 
+    target_dir=$(cd "$target_dir" 2>/dev/null && pwd) \
+        || error "Maalmappe finnes ikke eller er ikke en katalog: ${2:-${FILES_DIR:-.}}"
+
     [[ ! -f "$backup_file" ]] && error "Backup-fil finnes ikke: $backup_file"
 
     verify_checksum "$backup_file"
