@@ -111,7 +111,7 @@ setup_stubs_without_gpg() {
     local packets
     packets=$(gpg --batch --list-packets \
         --pinentry-mode loopback \
-        --passphrase "$BACKUP_ENCRYPTION_KEY" \
+        --passphrase-fd 3 3< <(printf '%s' "$BACKUP_ENCRYPTION_KEY") \
         < "$backup_file" 2>&1)
     [[ "$packets" =~ cipher\ 9 ]] || [[ "$packets" =~ AES256 ]]
 }
