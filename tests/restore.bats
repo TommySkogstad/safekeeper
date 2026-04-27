@@ -49,3 +49,61 @@ teardown() {
     [ "$status" -ne 0 ]
     [[ "$output" == *"Checksum-verifisering feilet"* ]]
 }
+
+# --- Fil-backup (.tar.gz.gpg) ---
+
+@test "--list-files viser tilgjengelige fil-backups" {
+    touch "$BACKUP_DIR/testprosjekt_files_20260101_120000.tar.gz.gpg"
+    run bash "$SAFEKEEPER_ROOT/restore.sh" --list-files
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"testprosjekt_files_20260101_120000.tar.gz.gpg"* ]]
+}
+
+@test "--list-files melder ingen backups hvis ingen finnes" {
+    run bash "$SAFEKEEPER_ROOT/restore.sh" --list-files
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Ingen fil-backups funnet"* ]]
+}
+
+@test "restore.sh feiler hvis fil-backup ikke finnes" {
+    export BACKUP_ENCRYPTION_KEY=testnokkel
+    run bash "$SAFEKEEPER_ROOT/restore.sh" "$BACKUP_DIR/finnes-ikke.tar.gz.gpg"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Backup-fil finnes ikke"* ]]
+}
+
+@test "restore.sh feiler hvis BACKUP_ENCRYPTION_KEY mangler for .tar.gz.gpg" {
+    local backup_file="$BACKUP_DIR/testprosjekt_files_20260101_120000.tar.gz.gpg"
+    echo "dummy" > "$backup_file"
+    unset BACKUP_ENCRYPTION_KEY
+    run bash "$SAFEKEEPER_ROOT/restore.sh" "$backup_file"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"BACKUP_ENCRYPTION_KEY"* ]]
+}
+
+@test "restore.sh feiler ved checksum-mismatch for fil-backup" {
+    export BACKUP_ENCRYPTION_KEY=testnokkel
+    local backup_file="$BACKUP_DIR/testprosjekt_files_20260101_120000.tar.gz.gpg"
+    echo "faktisk innhold" > "$backup_file"
+    echo "0000000000000000000000000000000000000000000000000000000000000000  $backup_file" \
+        > "${backup_file}.sha256"
+    run bash "$SAFEKEEPER_ROOT/restore.sh" "$backup_file"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Checksum-verifisering feilet"* ]]
+}
+
+@test "restore.sh gjenoppretter fil-backup til maalmappe" {
+    export BACKUP_ENCRYPTION_KEY=testnokkel
+    local target_dir
+    target_dir=$(mktemp -d)
+    local src_dir
+    src_dir=$(mktemp -d)
+    echo "testinnhold" > "$src_dir/testfil.txt"
+    local backup_file="$BACKUP_DIR/testprosjekt_files_20260101_120000.tar.gz.gpg"
+    # gpg-stubben passerer gjennom, så vi lager en ekte tar.gz
+    tar czf "$backup_file" -C "$(dirname "$src_dir")" "$(basename "$src_dir")"
+    run bash "$SAFEKEEPER_ROOT/restore.sh" "$backup_file" "$target_dir"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Fil-gjenoppretting fullfort"* ]]
+    rm -rf "$src_dir" "$target_dir"
+}
