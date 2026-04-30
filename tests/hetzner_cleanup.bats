@@ -76,3 +76,28 @@ testprosjekt_20200103_030000.sql.gz.gpg"
     call_count=$(wc -l < "$STUB_SSH_CALL_LOG")
     [[ "$call_count" -eq 0 ]]
 }
+
+@test "cleanup_hetzner avviser filnavn med spesialtegn og logger advarsel" {
+    export STUB_SSH_LS_OUTPUT="testprosjekt_20200101_030000.sql.gz.gpg
+testprosjekt_20200102_030000.sql.gz.gpg;rm -rf /
+testprosjekt_20200103_030000.sql.gz.gpg"
+
+    load_backup_lib
+    run cleanup_hetzner
+
+    # Filen med semikolon skal ikke være med i rm-kommandoen
+    ! grep -q 'rm.*rm -rf' "$STUB_SSH_CALL_LOG" 2>/dev/null
+    # Advarsel skal være logget
+    echo "$output" | grep -q "ADVARSEL"
+}
+
+@test "cleanup_hetzner behandler gyldige filnavn normalt" {
+    export STUB_SSH_LS_OUTPUT="testprosjekt_20200101_030000.sql.gz.gpg
+testprosjekt_20200102_030000.sql.gz.gpg"
+
+    load_backup_lib
+    run cleanup_hetzner
+
+    # Begge filer skal markeres for sletting (rm-kall skal forekomme)
+    grep -q ' rm ' "$STUB_SSH_CALL_LOG" 2>/dev/null
+}
