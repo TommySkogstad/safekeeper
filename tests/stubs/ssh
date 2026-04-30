@@ -4,5 +4,18 @@
 # samt sha256sum-verifiseringen (tom stdout -> remote_sha256 blir tom og
 # funksjonen logger advarsel, men returnerer 0).
 # Returnerer 1 hvis STUB_SSH_FAIL=1.
+#
+# Opt-in kallregistrering: sett STUB_SSH_CALL_LOG til en fil for å logge kall.
+# Opt-in ls-output: sett STUB_SSH_LS_OUTPUT for å returnere filnavn ved ls-kommandoer.
+
 [[ "${STUB_SSH_FAIL:-0}" == "1" ]] && exit 1
+
+if [[ -n "${STUB_SSH_CALL_LOG:-}" ]]; then
+    echo "$*" >> "$STUB_SSH_CALL_LOG"
+fi
+
+if [[ -n "${STUB_SSH_LS_OUTPUT:-}" ]] && [[ "$*" == *"ls "* ]]; then
+    echo "$STUB_SSH_LS_OUTPUT"
+fi
+
 exit 0
