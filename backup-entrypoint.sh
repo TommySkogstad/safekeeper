@@ -160,11 +160,11 @@ run_backup() {
     local db_wait_max=$(( DB_WAIT_TIMEOUT / 2 ))
     until pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" > /dev/null 2>&1; do
         db_wait_attempts=$(( db_wait_attempts + 1 ))
+        log "Venter pa database (forsok ${db_wait_attempts}/${db_wait_max})..."
+        sleep 2
         if [[ $db_wait_attempts -ge $db_wait_max ]]; then
             error "Database ikke tilgjengelig etter ${DB_WAIT_TIMEOUT} sekunder (${db_wait_attempts} forsok)"
         fi
-        log "Venter pa database (forsok ${db_wait_attempts}/${db_wait_max})..."
-        sleep 2
     done
 
     log "Krypterer backup med GPG (AES256)..."
