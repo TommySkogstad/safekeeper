@@ -159,6 +159,8 @@ GitHub Actions (`build.yml`) kjorer automatisk ved push og pull request:
 
 Docker Build kjorer forst etter at ShellCheck, Hadolint og BATS er godkjent (`needs: [shellcheck, hadolint, bats]`).
 
+**Dependabot**: Konfigurert i `.github/dependabot.yml` for automatisk oppdatering av GitHub Actions (ukentlig, mandag 08:00) med auto-merge pga. auto-merge-policyen.
+
 GitHub Actions (`issue-notify.yml`) sender push-varsling ved nye issues:
 
 | Jobb | Verktoey | Beskrivelse |

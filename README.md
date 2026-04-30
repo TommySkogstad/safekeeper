@@ -169,3 +169,4 @@ GitHub Actions kjorer automatisk ved push/PR:
 2. **Hadolint** — Linter Dockerfile
 3. **Docker Build** — Verifiserer at image bygges
 4. **Issue-varsling** — Sender ntfy push-varsel ved nye issues (kategoriserer BUG/FEATURE)
+5. **Dependabot** — Automatisk oppdatering av GitHub Actions (ukentlig)
