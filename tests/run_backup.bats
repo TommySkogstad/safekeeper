@@ -77,3 +77,19 @@ teardown() {
     files=$(find "$BACKUP_DIR" -maxdepth 1 -name "testprosjekt_*.sql.gz.gpg.sha256" | wc -l)
     [ "$files" -eq 0 ]
 }
+
+@test "run_backup feiler med feilmelding naar database aldri starter (DB_WAIT_TIMEOUT)" {
+    export STUB_PGISREADY_FAIL=always
+    export DB_WAIT_TIMEOUT=4
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"ikke tilgjengelig"* ]]
+}
+
+@test "run_backup logger forsoksteller mens den venter pa database" {
+    export STUB_PGISREADY_FAIL=always
+    export DB_WAIT_TIMEOUT=4
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"forsok"* ]]
+}
