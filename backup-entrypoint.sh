@@ -136,17 +136,23 @@ cleanup_hetzner() {
     cutoff_ts=$(date -d "-${BACKUP_RETENTION_DAYS} days" +%Y%m%d 2>/dev/null || date -v-"${BACKUP_RETENTION_DAYS}"d +%Y%m%d 2>/dev/null || echo "")
     [[ -z "$cutoff_ts" ]] && return 0
 
+    local files_to_delete=()
     # shellcheck disable=SC2086,SC2029
-    ssh ${SSH_OPTS} "${HETZNER_USER}@${HETZNER_HOST}" "ls ${HETZNER_BACKUP_PATH}" 2>/dev/null | while read -r remote_file; do
+    while read -r remote_file; do
         local file_date
         file_date=$(echo "$remote_file" | grep -oP "${PROJECT_NAME}_\K[0-9]{8}" || echo "")
         if [[ -n "$file_date" ]] && [[ "$file_date" < "$cutoff_ts" ]]; then
-            log "Sletter gammel offsite backup: $remote_file"
-            # shellcheck disable=SC2086,SC2029
-            ssh ${SSH_OPTS} "${HETZNER_USER}@${HETZNER_HOST}" \
-                "rm \"${HETZNER_BACKUP_PATH}/${remote_file}\"" 2>/dev/null || true
+            log "Markerer for sletting: $remote_file"
+            files_to_delete+=("${HETZNER_BACKUP_PATH}/${remote_file}")
         fi
-    done
+    done < <(ssh ${SSH_OPTS} "${HETZNER_USER}@${HETZNER_HOST}" "ls ${HETZNER_BACKUP_PATH}" 2>/dev/null)
+
+    if [[ ${#files_to_delete[@]} -gt 0 ]]; then
+        log "Sletter ${#files_to_delete[@]} gammel(e) offsite backup(s)..."
+        # shellcheck disable=SC2086,SC2029
+        ssh ${SSH_OPTS} "${HETZNER_USER}@${HETZNER_HOST}" \
+            "rm $(printf '"%s" ' "${files_to_delete[@]}")" 2>/dev/null || true
+    fi
 }
 
 run_backup() {
