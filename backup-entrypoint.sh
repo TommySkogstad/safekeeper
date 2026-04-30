@@ -139,6 +139,10 @@ cleanup_hetzner() {
     local files_to_delete=()
     # shellcheck disable=SC2086,SC2029
     while read -r remote_file; do
+        if [[ ! "$remote_file" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+            log "ADVARSEL: Avvist filnavn med ugyldige tegn: $remote_file"
+            continue
+        fi
         local file_date
         file_date=$(echo "$remote_file" | grep -oP "${PROJECT_NAME}_\K[0-9]{8}" || echo "")
         if [[ -n "$file_date" ]] && [[ "$file_date" < "$cutoff_ts" ]]; then
