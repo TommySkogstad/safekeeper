@@ -77,7 +77,7 @@ testprosjekt_20200103_030000.sql.gz.gpg"
     [[ "$call_count" -eq 0 ]]
 }
 
-@test "cleanup_hetzner avviser filnavn med spesialtegn og logger advarsel" {
+@test "cleanup_hetzner avviser filnavn med semikolon og logger advarsel" {
     export STUB_SSH_LS_OUTPUT="testprosjekt_20200101_030000.sql.gz.gpg
 testprosjekt_20200102_030000.sql.gz.gpg;rm -rf /
 testprosjekt_20200103_030000.sql.gz.gpg"
@@ -85,10 +85,30 @@ testprosjekt_20200103_030000.sql.gz.gpg"
     load_backup_lib
     run cleanup_hetzner
 
-    # Filen med semikolon skal ikke være med i rm-kommandoen
-    ! grep -q 'rm.*rm -rf' "$STUB_SSH_CALL_LOG" 2>/dev/null
+    # Filen med semikolon skal ikke finnes i rm-kommandoen
+    ! grep -q '20200102' "$STUB_SSH_CALL_LOG" 2>/dev/null
+    # Gyldige filer skal fortsatt slettes
+    grep -q '20200101' "$STUB_SSH_CALL_LOG" 2>/dev/null
+    grep -q '20200103' "$STUB_SSH_CALL_LOG" 2>/dev/null
     # Advarsel skal være logget
     echo "$output" | grep -q "ADVARSEL"
+}
+
+@test "cleanup_hetzner avviser filnavn med anforselstegn og skraastrek" {
+    export STUB_SSH_LS_OUTPUT='testprosjekt_20200101_030000.sql.gz.gpg
+testprosjekt_20200102_030000.sql.gz.gpg"injeksjon"
+../../../etc/passwd
+testprosjekt_20200103_030000.sql.gz.gpg'
+
+    load_backup_lib
+    run cleanup_hetzner
+
+    # Ugyldige filnavn skal ikke finnes i rm-kommandoen
+    ! grep -q 'injeksjon' "$STUB_SSH_CALL_LOG" 2>/dev/null
+    ! grep -q 'etc/passwd' "$STUB_SSH_CALL_LOG" 2>/dev/null
+    # Gyldige filer skal slettes
+    grep -q '20200101' "$STUB_SSH_CALL_LOG" 2>/dev/null
+    grep -q '20200103' "$STUB_SSH_CALL_LOG" 2>/dev/null
 }
 
 @test "cleanup_hetzner behandler gyldige filnavn normalt" {
@@ -98,6 +118,7 @@ testprosjekt_20200102_030000.sql.gz.gpg"
     load_backup_lib
     run cleanup_hetzner
 
-    # Begge filer skal markeres for sletting (rm-kall skal forekomme)
-    grep -q ' rm ' "$STUB_SSH_CALL_LOG" 2>/dev/null
+    # Begge filer skal være med i rm-kommandoen
+    grep -q '20200101' "$STUB_SSH_CALL_LOG" 2>/dev/null
+    grep -q '20200102' "$STUB_SSH_CALL_LOG" 2>/dev/null
 }
