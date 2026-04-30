@@ -36,7 +36,7 @@ jobs:
     needs: [shellcheck, hadolint, bats]
     steps:
       - uses: actions/checkout@v6
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           context: .
           push: false
