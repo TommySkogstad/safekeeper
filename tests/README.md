@@ -35,9 +35,13 @@ tests/
     ssh                      # Stub med STUB_SSH_FAIL, returnerer tom stdout
     sleep                    # Stub som returnerer umiddelbart
   check_requirements.bats    # Tester for manglende miljøvariabler
-  run_backup.bats            # Tester for happy-path backup-flyt
-  restore.bats               # Tester for restore.sh (checksum, krav om nøkkel)
+  cron.bats                  # Tester for cron-oppsett og safekeeper.env-generering
+  encryption.bats            # Tester for GPG AES256-kryptering (round-trip)
+  hetzner_cleanup.bats       # Tester for cleanup_hetzner (batching, ingen N+1 SSH, filnavn-validering)
   hetzner_retry.bats         # Tester for upload_with_retry (3 forsøk, feilmelding)
+  restore.bats               # Tester for restore.sh (checksum, krav om nøkkel)
+  retention.bats             # Tester for lokal backup-retention (sletting av gamle filer)
+  run_backup.bats            # Tester for happy-path backup-flyt
 ```
 
 ## Stubs og scenariovariasjon
@@ -55,4 +59,4 @@ Stub-binærene i `tests/stubs/` prependes til `PATH` via `setup_stubs()` i `help
 
 For testisolasjon kan `BACKUP_SUCCESS_FILE` settes til en mktemp-sti i stedet for den hardkodede `/tmp/last-backup-success`.
 
-`hetzner_retry.bats` sourcer `backup-entrypoint.sh` som bibliotek (main-kallet strippes bort) slik at `upload_with_retry` kan kalles direkte uten aa kjore en full backup-flyt.
+`hetzner_retry.bats` og `hetzner_cleanup.bats` sourcer `backup-entrypoint.sh` som bibliotek (main-kallet strippes bort) slik at `upload_with_retry` og `cleanup_hetzner` kan kalles direkte uten aa kjore en full backup-flyt.
