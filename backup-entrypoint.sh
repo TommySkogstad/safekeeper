@@ -144,7 +144,7 @@ cleanup_hetzner() {
             continue
         fi
         local file_date
-        file_date=$(echo "$remote_file" | grep -oP "${PROJECT_NAME}_\K[0-9]{8}" || echo "")
+        file_date=$(echo "$remote_file" | sed -n "s/.*${PROJECT_NAME}_\([0-9]\{8\}\).*/\1/p" || echo "")
         if [[ -n "$file_date" ]] && [[ "$file_date" < "$cutoff_ts" ]]; then
             log "Markerer for sletting: $remote_file"
             files_to_delete+=("${HETZNER_BACKUP_PATH}/${remote_file}")
