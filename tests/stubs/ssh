@@ -18,4 +18,8 @@ if [[ -n "${STUB_SSH_LS_OUTPUT:-}" ]] && [[ "$*" == *"ls "* ]]; then
     echo "$STUB_SSH_LS_OUTPUT"
 fi
 
+if [[ "${STUB_SSH_WRONG_CHECKSUM:-0}" == "1" ]] && [[ "$*" == *"sha256sum"* ]]; then
+    echo "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  /stub/file"
+fi
+
 exit 0
