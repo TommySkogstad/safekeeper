@@ -59,3 +59,27 @@ load_backup_lib() {
     run upload_with_retry "$dummy"
     [[ "$output" == *"Hetzner-opplasting feilet etter 3 forsok"* ]]
 }
+
+@test "upload_with_retry prover pa nytt ved checksum-mismatch etter opplasting" {
+    export STUB_SSH_WRONG_CHECKSUM=1
+    load_backup_lib
+
+    local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
+    echo "content" > "$dummy"
+
+    run upload_with_retry "$dummy"
+    [[ "$output" == *"Checksum-mismatch"* ]]
+    [[ "$output" == *"forsok 1/3"* ]]
+    [[ "$output" == *"forsok 2/3"* ]]
+}
+
+@test "upload_to_hetzner logger advarsel og returnerer 0 ved tom sha256sum-respons" {
+    load_backup_lib
+
+    local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
+    echo "content" > "$dummy"
+
+    run upload_to_hetzner "$dummy"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Kunne ikke verifisere checksum"* ]]
+}
