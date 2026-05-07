@@ -120,6 +120,7 @@ Sensitive filer ryddes opp via `trap EXIT`:
 - `StrictHostKeyChecking=accept-new` (TOFU-modell - aksepterer nye nokler, avviser endrede)
 - `BatchMode=yes` (ingen interaktive prompts)
 - Port 23 (Hetzner StorageBox standard)
+- **Dato-ekstraksjon**: `cleanup_hetzner` bruker POSIX sed (ikke `grep -oP`), siden BusyBox grep i postgres:16-alpine ikke støtter Perl-regex
 
 ### Filpermisjon
 
