@@ -101,3 +101,14 @@ testprosjekt_20200102_030000.sql.gz.gpg"
     # Begge filer skal markeres for sletting (rm-kall skal forekomme)
     grep -q ' rm ' "$STUB_SSH_CALL_LOG" 2>/dev/null
 }
+
+@test "cleanup_hetzner sletter gammel fil — dato-ekstraksjon med POSIX sed (BusyBox-kompatibel)" {
+    # grep -oP (Perl-regex) støttes ikke i BusyBox grep (postgres:16-alpine).
+    # Verifiserer at dato-ekstraksjon fungerer og at filen inkluderes i rm-kommandoen.
+    export STUB_SSH_LS_OUTPUT="testprosjekt_20200101_030000.sql.gz.gpg"
+
+    load_backup_lib
+    run cleanup_hetzner
+
+    grep -q 'testprosjekt_20200101_030000.sql.gz.gpg' "$STUB_SSH_CALL_LOG"
+}
