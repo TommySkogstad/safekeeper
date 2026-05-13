@@ -167,6 +167,7 @@ Integrasjonstester for `backup-entrypoint.sh` og `restore.sh` basert på [BATS](
 GitHub Actions kjorer automatisk ved push/PR:
 1. **ShellCheck** — Linter bash-scripts
 2. **Hadolint** — Linter Dockerfile
-3. **Docker Build** — Verifiserer at image bygges
-4. **Issue-varsling** — Sender ntfy push-varsel ved nye issues (kategoriserer BUG/FEATURE)
-5. **Dependabot** — Automatisk oppdatering av GitHub Actions (ukentlig)
+3. **BATS** — Kjorer integrasjonstester
+4. **Docker Build** — Verifiserer at image bygges (krever at alle tre over er grønne)
+5. **Issue-varsling** — Sender ntfy push-varsel ved nye issues (kategoriserer BUG/FEATURE)
+6. **Dependabot** — Automatisk oppdatering av GitHub Actions (ukentlig)
