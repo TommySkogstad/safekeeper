@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Prosjektoversikt
 
-**Safekeeper** - Parametrisert Docker-image for automatisk PostgreSQL-backup med lokal lagring (NAS) og offsite-backup til Hetzner StorageBox (SSH/SCP). Brukes av alle Kotlin/Ktor-appene i portefoljen (lo-finans, biologportal, 6810, summa-summarum, styreportal).
+**Safekeeper** - Parametrisert Docker-image for automatisk PostgreSQL-backup med lokal lagring (NAS) og offsite-backup til Hetzner StorageBox (SSH/SCP). Brukes av alle Kotlin/Ktor-appene i portefoljen (lo-finans, biologportal, 6810, styreportal, smart-casual).
 
 Alt styres via miljovariabler - ingen prosjektspesifikk kode. Samme image brukes av alle apper.
 
@@ -234,8 +234,8 @@ backup:
 | biologportal | `/mnt/nas-apps/biologportal/backups` | u554595 (Helsinki) | `0 3 * * *` |
 | lo-finans | `/mnt/nas-apps/lo-finans/backups` | Venter pa opprettelse | `0 5 * * *` |
 | 6810 | `/mnt/nas-apps/6810/backups` | Venter pa opprettelse | `0 5 * * *` |
-| summa-summarum | `/mnt/nas-apps/summa-summarum/backups` | Venter pa opprettelse | `0 5 * * *` |
 | styreportal | `/mnt/nas-apps/styreportal/backups` | Venter pa opprettelse | `30 1 * * *` |
+| smart-casual | `/mnt/nas-apps/smart-casual/backups` | Ikke satt opp | `0 5 * * *` |
 
 ### Kryssrepo-avhengigheter
 
