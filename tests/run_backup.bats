@@ -22,6 +22,7 @@ setup() {
 teardown() {
     rm -rf "$BACKUP_DIR"
     rm -f "$BACKUP_SUCCESS_FILE"
+    rm -f "${TMPDIR:-/tmp}/stub_gpg_encrypt_count_${BACKUP_DIR//\//_}"
 }
 
 @test "run_backup oppretter kryptert backup-fil i BACKUP_DIR" {
@@ -76,6 +77,7 @@ teardown() {
     local files
     files=$(find "$BACKUP_DIR" -maxdepth 1 -name "testprosjekt_*.sql.gz.gpg.sha256" | wc -l)
     [ "$files" -eq 0 ]
+    [ ! -f "$BACKUP_SUCCESS_FILE" ]
 }
 
 @test "BACKUP_SUCCESS_FILE skrives ikke naar backup_files feiler (GPG-feil under fil-backup)" {
