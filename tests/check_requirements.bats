@@ -6,13 +6,17 @@
 load 'helpers/common'
 
 setup() {
+    setup_stubs
     unset PROJECT_NAME DB_PASSWORD BACKUP_ENCRYPTION_KEY
     BACKUP_DIR="$(mktemp -d)"
-    export BACKUP_DIR
+    BACKUP_SUCCESS_FILE="$(mktemp -u)"
+    export BACKUP_DIR BACKUP_SUCCESS_FILE
 }
 
 teardown() {
     rm -rf "$BACKUP_DIR"
+    rm -f "$BACKUP_SUCCESS_FILE"
+    rm -f "${TMPDIR:-/tmp}/stub_gpg_encrypt_count_${BACKUP_DIR//\//_}"
 }
 
 @test "backup feiler hvis PROJECT_NAME mangler" {
@@ -60,9 +64,7 @@ teardown() {
     export DB_PASSWORD=hemmelig
     export BACKUP_ENCRYPTION_KEY=nokkel
     export BACKUP_SCHEDULE="0 3 * * *"
-    load 'helpers/common'
-    setup_stubs
     run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
-    # Skal ikke feile paa BACKUP_SCHEDULE
+    [ "$status" -eq 0 ]
     [[ "$output" != *"BACKUP_SCHEDULE har feil"* ]]
 }
