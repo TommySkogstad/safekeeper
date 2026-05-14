@@ -88,7 +88,7 @@ openssl rand -base64 32
 | `DB_USER` | Database-bruker | `${PROJECT_NAME}` | Nei |
 | `DB_PASSWORD` | Database-passord | - | Ja |
 | `BACKUP_DIR` | Lokal backup-katalog | `/backups` | Nei |
-| `BACKUP_SCHEDULE` | Cron-uttrykk for automatisk backup | `0 5 * * *` | Nei |
+| `BACKUP_SCHEDULE` | Cron-uttrykk for automatisk backup (valideres ved oppstart — må ha 5 felt) | `0 5 * * *` | Nei |
 | `BACKUP_RETENTION_DAYS` | Dager a beholde backups | `30` | Nei |
 | `BACKUP_ENCRYPTION_KEY` | GPG-krypteringsnokkel (AES256) | - | Ja |
 | `FILES_DIR` | Katalog for fil-backup (tom = deaktivert) | (tom) | Nei |
