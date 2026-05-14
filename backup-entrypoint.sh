@@ -218,7 +218,6 @@ run_backup() {
     cleanup_hetzner
 
     log "Backup fullfort OK"
-    date +%s > "$BACKUP_SUCCESS_FILE"
 }
 
 upload_with_retry() {
@@ -282,7 +281,6 @@ backup_files() {
     find "$BACKUP_DIR" -name "${PROJECT_NAME}_files_*.tar.gz" -not -name "*.gpg" -mtime "+${BACKUP_RETENTION_DAYS}" -delete 2>/dev/null || true
 
     log "Fil-backup fullfort OK"
-    date +%s > "$BACKUP_SUCCESS_FILE"
 }
 
 main() {
@@ -294,12 +292,14 @@ main() {
     if [[ "${1:-}" == "backup" ]]; then
         run_backup
         backup_files
+        date +%s > "$BACKUP_SUCCESS_FILE"
         exit 0
     fi
 
     log "Kjorer initial backup..."
     run_backup
     backup_files
+    date +%s > "$BACKUP_SUCCESS_FILE"
 
     log "Setter opp daglig backup: $BACKUP_SCHEDULE"
     # Eksporter miljovariabler til fil for cron (BusyBox crond arver ikke Docker env)

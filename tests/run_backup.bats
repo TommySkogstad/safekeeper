@@ -78,6 +78,21 @@ teardown() {
     [ "$files" -eq 0 ]
 }
 
+@test "BACKUP_SUCCESS_FILE skrives ikke naar backup_files feiler (GPG-feil under fil-backup)" {
+    local files_dir
+    files_dir="$(mktemp -d)"
+    touch "$files_dir/testfil.txt"
+    export FILES_DIR="$files_dir"
+    export STUB_GPG_FAIL_FILES=1
+
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+
+    [ ! -f "$BACKUP_SUCCESS_FILE" ]
+
+    rm -rf "$files_dir"
+}
+
 @test "run_backup feiler med feilmelding og forsoksteller naar database aldri starter (DB_WAIT_TIMEOUT)" {
     export STUB_PGISREADY_FAIL=always
     export DB_WAIT_TIMEOUT=4
