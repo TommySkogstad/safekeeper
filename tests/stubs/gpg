@@ -2,6 +2,8 @@
 # Stub for gpg. Pipe stdin direkte til stdout — fungerer for baade
 # --symmetric (krypter) og --decrypt siden ekte gzip ligger i pipelinen.
 # Returnerer 1 hvis STUB_GPG_FAIL=1.
+# Returnerer 1 paa andre krypteringskall hvis STUB_GPG_FAIL_FILES=1
+# (simulerer GPG-feil under fil-backup men ikke DB-backup).
 #
 # Lukker fd 3 eksplisitt for aa unngaa at process substitution
 # (--passphrase-fd 3 3< <(printf ...)) henger paa blokkert pipe.
@@ -10,6 +12,26 @@
 exec 3<&- 2>/dev/null || true
 
 [[ "${STUB_GPG_FAIL:-0}" == "1" ]] && exit 1
+
+# STUB_GPG_FAIL_FILES=1: feil paa andre krypteringskall (backup_files sin kryptering)
+# Bruk kalltellerfilm i tmpdir for aa telle krypteringskall (kun --symmetric)
+if [[ "${STUB_GPG_FAIL_FILES:-0}" == "1" ]]; then
+    for arg in "$@"; do
+        if [[ "$arg" == "--symmetric" ]]; then
+            COUNTER_FILE="${TMPDIR:-/tmp}/stub_gpg_encrypt_count_$$"
+            # Finn teller-filen basert paa BACKUP_DIR for aa vaere prosess-uavhengig
+            COUNTER_FILE="${TMPDIR:-/tmp}/stub_gpg_encrypt_count_${BACKUP_DIR//\//_}"
+            count=0
+            [[ -f "$COUNTER_FILE" ]] && count=$(cat "$COUNTER_FILE")
+            count=$(( count + 1 ))
+            echo "$count" > "$COUNTER_FILE"
+            if [[ "$count" -ge 2 ]]; then
+                exit 1
+            fi
+            break
+        fi
+    done
+fi
 
 # Passthrough: stdin -> stdout
 cat
