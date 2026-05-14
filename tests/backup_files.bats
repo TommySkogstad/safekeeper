@@ -27,7 +27,7 @@ setup() {
 teardown() {
     rm -rf "$BACKUP_DIR"
     rm -f "$BACKUP_SUCCESS_FILE"
-    rm -rf "$FILES_DIR"
+    [[ -n "${FILES_DIR:-}" ]] && rm -rf "$FILES_DIR"
     rm -f "${TMPDIR:-/tmp}/stub_gpg_encrypt_count_${BACKUP_DIR//\//_}"
 }
 
@@ -75,6 +75,16 @@ teardown() {
     [ "$files" -eq 0 ]
 }
 
+@test "backup_files feiler ikke naar FILES_DIR peker paa ikke-eksisterende katalog" {
+    export FILES_DIR="/tmp/finnes-ikke-$(date +%s)"
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -eq 0 ]
+
+    local files
+    files=$(find "$BACKUP_DIR" -maxdepth 1 -name "testprosjekt_files_*.tar.gz.gpg" | wc -l)
+    [ "$files" -eq 0 ]
+}
+
 @test "backup_files feiler hvis gpg kryptering feiler (STUB_GPG_FAIL_FILES=1)" {
     export STUB_GPG_FAIL_FILES=1
     run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
@@ -83,4 +93,12 @@ teardown() {
     local files
     files=$(find "$BACKUP_DIR" -maxdepth 1 -name "testprosjekt_files_*.tar.gz.gpg.sha256" | wc -l)
     [ "$files" -eq 0 ]
+}
+
+@test "BACKUP_SUCCESS_FILE skrives ikke naar backup_files feiler (GPG-feil)" {
+    export STUB_GPG_FAIL_FILES=1
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+
+    [ ! -f "$BACKUP_SUCCESS_FILE" ]
 }
