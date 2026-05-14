@@ -44,3 +44,25 @@ teardown() {
     [ "$status" -ne 0 ]
     [[ "$output" == *"BACKUP_ENCRYPTION_KEY"* ]]
 }
+
+@test "check_requirements feiler hvis BACKUP_SCHEDULE har feil antall felt" {
+    export PROJECT_NAME=testprosjekt
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    export BACKUP_SCHEDULE="every day at 3"
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"BACKUP_SCHEDULE"* ]]
+}
+
+@test "check_requirements aksepterer gyldig cron-uttrykk (5 felt)" {
+    export PROJECT_NAME=testprosjekt
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    export BACKUP_SCHEDULE="0 3 * * *"
+    load 'helpers/common'
+    setup_stubs
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    # Skal ikke feile paa BACKUP_SCHEDULE
+    [[ "$output" != *"BACKUP_SCHEDULE har feil"* ]]
+}

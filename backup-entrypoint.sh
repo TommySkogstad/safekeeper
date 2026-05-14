@@ -60,9 +60,17 @@ cleanup() {
 }
 trap cleanup EXIT
 
+validate_cron_schedule() {
+    local schedule="$1"
+    local parts
+    read -ra parts <<< "$schedule"
+    [[ ${#parts[@]} -eq 5 ]] || error "BACKUP_SCHEDULE har feil antall felter (forventet 5, fikk ${#parts[@]}): '$schedule'"
+}
+
 check_requirements() {
     [[ -n "${DB_PASSWORD:-}" ]] || error "Manglende miljovariabel: DB_PASSWORD"
     [[ -n "$BACKUP_ENCRYPTION_KEY" ]] || error "Manglende miljovariabel: BACKUP_ENCRYPTION_KEY. Kryptering er pakrevd."
+    validate_cron_schedule "$BACKUP_SCHEDULE"
 
     # Kopier SSH-nokkel med riktige tillatelser (montert nokkel kan ha feil eierskap)
     if [[ -f /root/.ssh/id_ed25519 ]]; then
