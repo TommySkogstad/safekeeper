@@ -1,4 +1,4 @@
-FROM postgres:16.13-alpine
+FROM postgres:16.13-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
 
 RUN apk add --no-cache \
     bash \
