@@ -34,6 +34,7 @@ tests/
     scp                      # Stub med STUB_SCP_FAIL for Hetzner-retry-tester
     ssh                      # Stub med STUB_SSH_FAIL, returnerer tom stdout
     sleep                    # Stub som returnerer umiddelbart
+  backup_files.bats          # Tester for backup_files() happy-path (.tar.gz.gpg, .sha256, chmod 600)
   check_requirements.bats    # Tester for manglende miljøvariabler
   cron.bats                  # Tester for cron-oppsett og safekeeper.env-generering
   encryption.bats            # Tester for GPG AES256-kryptering (round-trip)
