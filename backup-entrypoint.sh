@@ -311,7 +311,7 @@ main() {
 
     log "Setter opp daglig backup: $BACKUP_SCHEDULE"
     # Eksporter miljovariabler til fil for cron (BusyBox crond arver ikke Docker env)
-    env | grep -E '^(PROJECT_NAME|DB_|BACKUP_|FILES_DIR|HETZNER_|TZ)[^=]*=' | sed 's/^\(.*\)$/export \1/' > "$SAFEKEEPER_ENV_FILE"
+    env | grep -E '^(PROJECT_NAME|DB_|BACKUP_|FILES_DIR|HETZNER_|TZ)[^=]*=' | sed "s/^\\([^=]*\\)=\\(.*\\)\$/export \\1='\\2'/" > "$SAFEKEEPER_ENV_FILE"
     chmod 600 "$SAFEKEEPER_ENV_FILE"
     echo "$BACKUP_SCHEDULE . $SAFEKEEPER_ENV_FILE; /usr/local/bin/backup-entrypoint.sh backup >> /var/log/backup.log 2>&1" > "$CRONTAB_FILE"
 
