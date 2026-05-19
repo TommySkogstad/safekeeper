@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Prosjektoversikt
 
-**Safekeeper** - Parametrisert Docker-image for automatisk PostgreSQL-backup med lokal lagring (NAS) og offsite-backup til Hetzner StorageBox (SSH/SCP). Brukes av alle Kotlin/Ktor-appene i portefoljen (lo-finans, biologportal, 6810, styreportal, smart-casual).
+**Safekeeper** - Parametrisert Docker-image for automatisk PostgreSQL-backup med lokal lagring (NAS) og offsite-backup til Hetzner StorageBox (SSH/SCP). Brukes av alle Kotlin/Ktor-appene i portefoljen (biologportal, 6810, styreportal, smart-casual).
 
 Alt styres via miljovariabler - ingen prosjektspesifikk kode. Samme image brukes av alle apper.
 
@@ -51,6 +51,8 @@ Docker Compose (per app)
 6. SHA256-checksum genereres
 7. Opplasting til Hetzner StorageBox med checksum-verifisering
 8. Opprydding av gamle backups (lokalt + Hetzner)
+9. Eventuell fil-backup (hvis `FILES_DIR` er satt) — samme operasjoner som ovenfor
+10. Skriv `/tmp/last-backup-success` med timestamp (kun hvis BÅDE database-backup OG fil-backup er vellykkede)
 
 ### Fil-backup (valgfritt)
 
@@ -184,7 +186,7 @@ gh run list --repo TommySkogstad/safekeeper --limit 5
 - **Ingen prosjektspesifikk kode**: Alt styres via miljovariabler. Ikke legg til logikk som er spesifikk for en enkelt app.
 - **Norsk logging**: Alle loggmeldinger er pa norsk.
 - **set -euo pipefail**: Alle skript bruker streng feilhandtering.
-- **Healthcheck**: Containeren skriver `/tmp/last-backup-success` med timestamp ved vellykket backup. Healthcheck sjekker at siste backup var innen 26 timer (93600 sekunder).
+- **Healthcheck**: Containeren skriver `/tmp/last-backup-success` med timestamp når BÅDE database-backup og fil-backup (hvis konfigurert) er vellykkede. Healthcheck sjekker at siste backup var innen 26 timer (93600 sekunder).
 - **Retry-logikk**: Hetzner-opplasting prover 3 ganger med eksponentiell backoff (5s, 10s, 20s).
 - **Retention**: Gamle backups slettes automatisk bade lokalt og pa Hetzner etter `BACKUP_RETENTION_DAYS`.
 - **Initial backup**: Ved oppstart kjores en backup umiddelbart for cron settes opp.
@@ -232,7 +234,6 @@ backup:
 | App | NAS-sti | Hetzner StorageBox | Schedule |
 |-----|---------|-------------------|----------|
 | biologportal | `/mnt/nas-apps/biologportal/backups` | u554595 (Helsinki) | `0 3 * * *` |
-| lo-finans | `/mnt/nas-apps/lo-finans/backups` | Venter pa opprettelse | `0 5 * * *` |
 | 6810 | `/mnt/nas-apps/6810/backups` | Venter pa opprettelse | `0 5 * * *` |
 | styreportal | `/mnt/nas-apps/styreportal/backups` | Venter pa opprettelse | `30 1 * * *` |
 | smart-casual | `/mnt/nas-apps/smart-casual/backups` | Ikke satt opp | `0 5 * * *` |
