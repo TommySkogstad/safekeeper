@@ -112,6 +112,16 @@ testprosjekt_20200102_030000.sql.gz.gpg"
     grep -q ' rm ' "$STUB_SSH_CALL_LOG" 2>/dev/null
 }
 
+@test "cleanup_hetzner returnerer feil og logger advarsel naar dato-cutoff-kalkulasjon feiler" {
+    export STUB_DATE_FAIL=1
+
+    load_backup_lib
+    run cleanup_hetzner
+
+    [[ "$status" -ne 0 ]]
+    echo "$output" | grep -q "ADVARSEL"
+}
+
 @test "cleanup_hetzner sletter gammel fil — dato-ekstraksjon med POSIX sed (BusyBox-kompatibel)" {
     # grep -oP (Perl-regex) støttes ikke i BusyBox grep (postgres:16-alpine).
     # Verifiserer at dato-ekstraksjon fungerer og at filen inkluderes i rm-kommandoen.

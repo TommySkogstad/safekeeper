@@ -158,7 +158,7 @@ cleanup_hetzner() {
     log "Rydder gamle backups pa Hetzner StorageBox..."
     local cutoff_ts
     cutoff_ts=$(date -d "-${BACKUP_RETENTION_DAYS} days" +%Y%m%d 2>/dev/null || date -v-"${BACKUP_RETENTION_DAYS}"d +%Y%m%d 2>/dev/null || echo "")
-    [[ -z "$cutoff_ts" ]] && return 0
+    [[ -z "$cutoff_ts" ]] && { log "ADVARSEL: Klarte ikke beregne dato-cutoff for Hetzner cleanup — sjekk BACKUP_RETENTION_DAYS='${BACKUP_RETENTION_DAYS}'"; return 1; }
 
     local files_to_delete=()
     # shellcheck disable=SC2029 # lokal ekspansjon tilsiktet — verdier validert i check_requirements()
