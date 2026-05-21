@@ -40,7 +40,7 @@ tests/
   encryption.bats            # Tester for GPG AES256-kryptering (round-trip)
   hetzner_cleanup.bats       # Tester for cleanup_hetzner (batching, ingen N+1 SSH, filnavn-validering)
   hetzner_retry.bats         # Tester for upload_with_retry (3 forsøk, feilmelding)
-  restore.bats               # Tester for restore.sh (checksum, krav om nøkkel)
+  restore.bats               # Tester for restore.sh (checksum, krav om nøkkel, psql-feil)
   retention.bats             # Tester for lokal backup-retention (sletting av gamle filer)
   run_backup.bats            # Tester for happy-path backup-flyt
 ```
