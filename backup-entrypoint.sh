@@ -158,6 +158,7 @@ cleanup_hetzner() {
     [[ -z "$cutoff_ts" ]] && return 0
 
     local files_to_delete=()
+    # shellcheck disable=SC2029 # lokal ekspansjon tilsiktet — verdier validert i check_requirements()
     while read -r remote_file; do
         if [[ ! "$remote_file" =~ ^[a-zA-Z0-9._-]+$ ]]; then
             log "ADVARSEL: Avvist filnavn med ugyldige tegn: $remote_file"
@@ -169,7 +170,6 @@ cleanup_hetzner() {
             log "Markerer for sletting: $remote_file"
             files_to_delete+=("${HETZNER_BACKUP_PATH}/${remote_file}")
         fi
-    # shellcheck disable=SC2029 # lokal ekspansjon tilsiktet — verdier validert i check_requirements()
     done < <(ssh "${SSH_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" ls "${HETZNER_BACKUP_PATH}" 2>/dev/null)
 
     if [[ ${#files_to_delete[@]} -gt 0 ]]; then
