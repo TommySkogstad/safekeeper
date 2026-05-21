@@ -194,6 +194,16 @@ cleanup_hetzner() {
     fi
 }
 
+cleanup_local() {
+    local ext="$1"
+    find "$BACKUP_DIR" -name "${PROJECT_NAME}_*.${ext}.gpg" -mtime "+${BACKUP_RETENTION_DAYS}" -delete \
+        || log "ADVARSEL: Fjerning av gamle lokale ${ext}-backups feilet — sjekk rettigheter på $BACKUP_DIR"
+    find "$BACKUP_DIR" -name "${PROJECT_NAME}_*.${ext}.gpg.sha256" -mtime "+${BACKUP_RETENTION_DAYS}" -delete \
+        || log "ADVARSEL: Fjerning av gamle lokale ${ext} checksum-filer feilet — sjekk rettigheter på $BACKUP_DIR"
+    find "$BACKUP_DIR" -name "${PROJECT_NAME}_*.${ext}" -not -name "*.gpg" -mtime "+${BACKUP_RETENTION_DAYS}" -delete \
+        || log "ADVARSEL: Fjerning av gamle ukrypterte lokale ${ext}-backups feilet — sjekk rettigheter på $BACKUP_DIR"
+}
+
 run_backup() {
     local timestamp
     timestamp=$(date +%Y%m%d_%H%M%S)
@@ -245,13 +255,7 @@ run_backup() {
     upload_with_retry "${backup_file}.sha256"
 
     # Slett lokale backups eldre enn BACKUP_RETENTION_DAYS
-    find "$BACKUP_DIR" -name "${PROJECT_NAME}_*.sql.gz.gpg" -mtime "+${BACKUP_RETENTION_DAYS}" -delete \
-        || log "ADVARSEL: Fjerning av gamle lokale DB-backups feilet — sjekk rettigheter på $BACKUP_DIR"
-    find "$BACKUP_DIR" -name "${PROJECT_NAME}_*.sql.gz.gpg.sha256" -mtime "+${BACKUP_RETENTION_DAYS}" -delete \
-        || log "ADVARSEL: Fjerning av gamle lokale checksum-filer feilet — sjekk rettigheter på $BACKUP_DIR"
-    # Rydd opp eventuelle gamle ukrypterte backups
-    find "$BACKUP_DIR" -name "${PROJECT_NAME}_*.sql.gz" -not -name "*.gpg" -mtime "+${BACKUP_RETENTION_DAYS}" -delete \
-        || log "ADVARSEL: Fjerning av gamle ukrypterte lokale backups feilet — sjekk rettigheter på $BACKUP_DIR"
+    cleanup_local "sql.gz"
 
     # Slett gamle backups pa Hetzner
     cleanup_hetzner
@@ -314,13 +318,7 @@ backup_files() {
     upload_with_retry "${backup_file}.sha256"
 
     # Rydd opp gamle fil-backups
-    find "$BACKUP_DIR" -name "${PROJECT_NAME}_files_*.tar.gz.gpg" -mtime "+${BACKUP_RETENTION_DAYS}" -delete \
-        || log "ADVARSEL: Fjerning av gamle lokale fil-backups feilet — sjekk rettigheter på $BACKUP_DIR"
-    find "$BACKUP_DIR" -name "${PROJECT_NAME}_files_*.tar.gz.gpg.sha256" -mtime "+${BACKUP_RETENTION_DAYS}" -delete \
-        || log "ADVARSEL: Fjerning av gamle lokale fil-backup checksum-filer feilet — sjekk rettigheter på $BACKUP_DIR"
-    # Rydd opp eventuelle gamle ukrypterte fil-backups
-    find "$BACKUP_DIR" -name "${PROJECT_NAME}_files_*.tar.gz" -not -name "*.gpg" -mtime "+${BACKUP_RETENTION_DAYS}" -delete \
-        || log "ADVARSEL: Fjerning av gamle ukrypterte lokale fil-backups feilet — sjekk rettigheter på $BACKUP_DIR"
+    cleanup_local "tar.gz"
 
     log "Fil-backup fullfort OK"
 }
