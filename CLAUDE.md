@@ -186,6 +186,7 @@ gh run list --repo TommySkogstad/safekeeper --limit 5
 - **Ingen prosjektspesifikk kode**: Alt styres via miljovariabler. Ikke legg til logikk som er spesifikk for en enkelt app.
 - **Norsk logging**: Alle loggmeldinger er pa norsk.
 - **set -euo pipefail**: Alle skript bruker streng feilhandtering.
+- **Eksplisitte advarsler ved kritiske operasjoner**: Operasjoner som `mkdir`, `rm`, `find -delete` og checksum-verifikasjoner må aldri silently feile med `|| true`. I stedet: logg `ADVARSEL` med kontekst og returner feilkode. Eksempler: mkdir som mislykkes skal sjekke `test -d` og advare hvis både create og verify feiler; rm som mislykkes skal advare om rettigheter; find som mislykkes skal advare om disk-problemer.
 - **Healthcheck**: Containeren skriver `/tmp/last-backup-success` med timestamp når BÅDE database-backup og fil-backup (hvis konfigurert) er vellykkede. Healthcheck sjekker at siste backup var innen 26 timer (93600 sekunder).
 - **Retry-logikk**: Hetzner-opplasting prover 3 ganger med eksponentiell backoff (5s, 10s, 20s).
 - **Retention**: Gamle backups slettes automatisk bade lokalt og pa Hetzner etter `BACKUP_RETENTION_DAYS`.
