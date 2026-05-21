@@ -125,3 +125,27 @@ load_backup_lib() {
     [[ "$output" == *"feilet etter 2 forsok"* ]]
     [[ "$output" != *"forsok 2/2"* ]]
 }
+
+@test "upload_to_hetzner returnerer 1 og logger katalog-feil ved SSH permission denied (STUB_SSH_EXIT=permission_denied)" {
+    export STUB_SSH_EXIT=permission_denied
+    load_backup_lib
+
+    local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
+    echo "content" > "$dummy"
+
+    run upload_to_hetzner "$dummy"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"katalog"* ]]
+}
+
+@test "upload_to_hetzner returnerer 1 og logger katalog-feil ved SSH timeout (STUB_SSH_EXIT=timeout, exit 255)" {
+    export STUB_SSH_EXIT=timeout
+    load_backup_lib
+
+    local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
+    echo "content" > "$dummy"
+
+    run upload_to_hetzner "$dummy"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"katalog"* ]]
+}

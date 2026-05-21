@@ -5,9 +5,18 @@
 # funksjonen logger advarsel, men returnerer 0).
 # Returnerer 1 hvis STUB_SSH_FAIL=1.
 #
+# Opt-in exit-mode: sett STUB_SSH_EXIT for å simulere spesifikke SSH-feil.
+# Støttede verdier: permission_denied (exit 1), timeout (exit 255), eller numerisk exit-kode.
 # Opt-in kallregistrering: sett STUB_SSH_CALL_LOG til en fil for å logge kall.
 # Opt-in ls-output: sett STUB_SSH_LS_OUTPUT for å returnere filnavn ved ls-kommandoer.
 # Opt-in rm-feil: sett STUB_SSH_RM_FAIL=1 for å simulere at rm-kommandoer feiler.
+
+case "${STUB_SSH_EXIT:-}" in
+    permission_denied) echo "Permission denied (publickey)." >&2; exit 1 ;;
+    timeout)           exit 255 ;;
+    "")                ;;
+    *)                 exit "${STUB_SSH_EXIT}" ;;
+esac
 
 [[ "${STUB_SSH_FAIL:-0}" == "1" ]] && exit 1
 
