@@ -77,6 +77,13 @@ check_requirements() {
 
     [[ "$PROJECT_NAME" =~ ^[a-zA-Z0-9._-]{1,64}$ ]] || error "PROJECT_NAME inneholder ugyldige tegn: '$PROJECT_NAME'"
 
+    [[ "$BACKUP_RETRY_MAX" =~ ^[0-9]+$ ]] && [[ "$BACKUP_RETRY_MAX" -ge 1 ]] \
+        || error "BACKUP_RETRY_MAX må være et positivt heltall >= 1, fikk: '$BACKUP_RETRY_MAX'"
+    [[ "$BACKUP_RETRY_DELAY" =~ ^[0-9]+$ ]] && [[ "$BACKUP_RETRY_DELAY" -ge 1 ]] \
+        || error "BACKUP_RETRY_DELAY må være et positivt heltall >= 1, fikk: '$BACKUP_RETRY_DELAY'"
+    [[ "$BACKUP_HEALTHCHECK_WINDOW" =~ ^[0-9]+$ ]] && [[ "$BACKUP_HEALTHCHECK_WINDOW" -ge 1 ]] \
+        || error "BACKUP_HEALTHCHECK_WINDOW må være et positivt heltall >= 1, fikk: '$BACKUP_HEALTHCHECK_WINDOW'"
+
     if [[ -n "$HETZNER_HOST" ]]; then
         [[ "$HETZNER_HOST" =~ ^[a-zA-Z0-9.-]+$ ]] || error "HETZNER_HOST inneholder ugyldige tegn: '$HETZNER_HOST'"
         if [[ -n "$HETZNER_USER" ]]; then

@@ -39,6 +39,7 @@ load_backup_lib() {
 
 @test "upload_with_retry prover 3 ganger ved vedvarende scp-feil" {
     export STUB_SCP_FAIL=1
+    export BACKUP_RETRY_MAX=3
     load_backup_lib
 
     local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
@@ -51,6 +52,7 @@ load_backup_lib() {
 
 @test "upload_with_retry logger 'etter 3 forsok' ved total feil" {
     export STUB_SCP_FAIL=1
+    export BACKUP_RETRY_MAX=3
     load_backup_lib
 
     local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
@@ -62,6 +64,7 @@ load_backup_lib() {
 
 @test "upload_with_retry prover pa nytt ved checksum-mismatch etter opplasting" {
     export STUB_SSH_WRONG_CHECKSUM=1
+    export BACKUP_RETRY_MAX=3
     load_backup_lib
 
     local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
