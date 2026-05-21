@@ -1,0 +1,14 @@
+#!/bin/bash
+# Stub for date.
+# Returnerer 1 for retention-kalkulasjoner (-d/-v) hvis STUB_DATE_FAIL=1.
+# Kaller real date for alle andre kommandoer.
+
+if [[ "${STUB_DATE_FAIL:-0}" == "1" ]]; then
+    for arg in "$@"; do
+        if [[ "$arg" == "-d" ]] || [[ "$arg" =~ ^-v ]]; then
+            exit 1
+        fi
+    done
+fi
+
+exec /usr/bin/date "$@"
