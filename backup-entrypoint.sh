@@ -261,7 +261,7 @@ upload_with_retry() {
         upload_to_hetzner "$backup_file" && return 0
         if [[ $attempt -lt "$max_retries" ]]; then
             log "Hetzner-opplasting feilet (forsok $attempt/$max_retries). Prover igjen om ${retry_delay}s..."
-            sleep $retry_delay
+            sleep "$retry_delay"
             retry_delay=$((retry_delay * 2))
         fi
     done
