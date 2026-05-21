@@ -95,3 +95,30 @@ load_backup_lib() {
     [ "$status" -eq 1 ]
     [[ "$output" == *"katalog"* ]]
 }
+
+@test "upload_with_retry respekterer BACKUP_RETRY_MAX=1 (ingen gjenforsok)" {
+    export STUB_SCP_FAIL=1
+    export BACKUP_RETRY_MAX=1
+    load_backup_lib
+
+    local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
+    echo "content" > "$dummy"
+
+    run upload_with_retry "$dummy"
+    [[ "$output" == *"feilet etter 1 forsok"* ]]
+    [[ "$output" != *"Prover igjen"* ]]
+}
+
+@test "upload_with_retry respekterer BACKUP_RETRY_MAX=2 (ett gjenforsok)" {
+    export STUB_SCP_FAIL=1
+    export BACKUP_RETRY_MAX=2
+    load_backup_lib
+
+    local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
+    echo "content" > "$dummy"
+
+    run upload_with_retry "$dummy"
+    [[ "$output" == *"forsok 1/2"* ]]
+    [[ "$output" == *"feilet etter 2 forsok"* ]]
+    [[ "$output" != *"forsok 2/2"* ]]
+}

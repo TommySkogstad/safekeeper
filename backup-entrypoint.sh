@@ -24,6 +24,9 @@ DB_USER="${DB_USER:-${PROJECT_NAME}}"
 
 BACKUP_ENCRYPTION_KEY="${BACKUP_ENCRYPTION_KEY:-}"
 DB_WAIT_TIMEOUT="${DB_WAIT_TIMEOUT:-60}"
+BACKUP_RETRY_MAX="${BACKUP_RETRY_MAX:-3}"
+BACKUP_RETRY_DELAY="${BACKUP_RETRY_DELAY:-5}"
+BACKUP_HEALTHCHECK_WINDOW="${BACKUP_HEALTHCHECK_WINDOW:-93600}"
 
 # Interne fil-stier (kan overstyres i tester via env-variabler)
 SAFEKEEPER_ENV_FILE="${SAFEKEEPER_ENV_FILE:-/etc/safekeeper.env}"
@@ -192,6 +195,7 @@ run_backup() {
     log "Starter backup..."
 
     local db_wait_attempts=0
+    # pg_isready polles hvert 2. sekund, så maks forsøk = timeout / pollintervall
     local db_wait_max=$(( DB_WAIT_TIMEOUT / 2 ))
     until pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" > /dev/null 2>&1; do
         db_wait_attempts=$(( db_wait_attempts + 1 ))
@@ -250,14 +254,14 @@ run_backup() {
 
 upload_with_retry() {
     local backup_file="$1"
-    local max_retries=3
-    local retry_delay=5
+    local max_retries="$BACKUP_RETRY_MAX"
+    local retry_delay="$BACKUP_RETRY_DELAY"
 
     for attempt in $(seq 1 "$max_retries"); do
         upload_to_hetzner "$backup_file" && return 0
         if [[ $attempt -lt "$max_retries" ]]; then
             log "Hetzner-opplasting feilet (forsok $attempt/$max_retries). Prover igjen om ${retry_delay}s..."
-            sleep $retry_delay
+            sleep "$retry_delay"
             retry_delay=$((retry_delay * 2))
         fi
     done

@@ -93,6 +93,9 @@ openssl rand -base64 32
 | `BACKUP_SCHEDULE` | Cron-uttrykk for automatisk backup (valideres ved oppstart — må ha 5 felt) | `0 5 * * *` | Nei |
 | `BACKUP_RETENTION_DAYS` | Dager a beholde backups | `30` | Nei |
 | `BACKUP_ENCRYPTION_KEY` | GPG-krypteringsnokkel (AES256) | - | Ja |
+| `BACKUP_RETRY_MAX` | Maks antall Hetzner-opplastingsforsøk | `3` | Nei |
+| `BACKUP_RETRY_DELAY` | Startverdien (sekunder) for eksponentiell backoff ved retry | `5` | Nei |
+| `BACKUP_HEALTHCHECK_WINDOW` | Maks alder (sekunder) på siste vellykkede backup for healthcheck | `93600` | Nei |
 | `FILES_DIR` | Katalog for fil-backup (tom = deaktivert) | (tom) | Nei |
 | `HETZNER_HOST` | Hetzner StorageBox hostname (tom = deaktivert) | (tom) | Nei |
 | `HETZNER_USER` | Hetzner StorageBox brukernavn | (tom) | Nei |
@@ -187,7 +190,7 @@ gh run list --repo TommySkogstad/safekeeper --limit 5
 - **Norsk logging**: Alle loggmeldinger er pa norsk.
 - **set -euo pipefail**: Alle skript bruker streng feilhandtering.
 - **Eksplisitte advarsler ved kritiske operasjoner**: Operasjoner som `mkdir`, `rm`, `find -delete` og checksum-verifikasjoner må aldri silently feile med `|| true`. I stedet: logg `ADVARSEL` med kontekst og returner feilkode. Eksempler: mkdir som mislykkes skal sjekke `test -d` og advare hvis både create og verify feiler; rm som mislykkes skal advare om rettigheter; find som mislykkes skal advare om disk-problemer.
-- **Healthcheck**: Containeren skriver `/tmp/last-backup-success` med timestamp når BÅDE database-backup og fil-backup (hvis konfigurert) er vellykkede. Healthcheck sjekker at siste backup var innen 26 timer (93600 sekunder).
+- **Healthcheck**: Containeren skriver `/tmp/last-backup-success` med timestamp når BÅDE database-backup og fil-backup (hvis konfigurert) er vellykkede. Healthcheck sjekker at siste backup var innen `BACKUP_HEALTHCHECK_WINDOW` sekunder (default 93600 = 26 timer).
 - **Retry-logikk**: Hetzner-opplasting prover 3 ganger med eksponentiell backoff (5s, 10s, 20s).
 - **Retention**: Gamle backups slettes automatisk bade lokalt og pa Hetzner etter `BACKUP_RETENTION_DAYS`.
 - **Initial backup**: Ved oppstart kjores en backup umiddelbart for cron settes opp.
@@ -205,7 +208,7 @@ backup:
     dockerfile: Dockerfile
   restart: unless-stopped
   healthcheck:
-    test: ["CMD-SHELL", "test -f /tmp/last-backup-success && [ $(($(date +%s) - $(cat /tmp/last-backup-success))) -lt 93600 ]"]
+    test: ["CMD-SHELL", "test -f /tmp/last-backup-success && [ $(($(date +%s) - $(cat /tmp/last-backup-success))) -lt ${BACKUP_HEALTHCHECK_WINDOW:-93600} ]"]
     interval: 60s
     timeout: 10s
     retries: 3
