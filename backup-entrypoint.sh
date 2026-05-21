@@ -115,6 +115,7 @@ upload_to_hetzner() {
     for part in "${path_parts[@]}"; do
         [[ -z "$part" ]] && continue
         current_path="${current_path:+${current_path}/}${part}"
+        # shellcheck disable=SC2029 # lokal ekspansjon tilsiktet — verdier validert i check_requirements()
         ssh "${SSH_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" mkdir "${current_path}" 2>/dev/null || true
     done
 
@@ -132,6 +133,7 @@ upload_to_hetzner() {
 
     # Verifiser checksum pa Hetzner
     local remote_sha256
+    # shellcheck disable=SC2029 # lokal ekspansjon tilsiktet — verdier validert i check_requirements()
     remote_sha256=$(ssh "${SSH_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" \
         sha256sum "${HETZNER_BACKUP_PATH}/${filename}" 2>/dev/null | cut -d' ' -f1 || echo "")
 
@@ -167,10 +169,12 @@ cleanup_hetzner() {
             log "Markerer for sletting: $remote_file"
             files_to_delete+=("${HETZNER_BACKUP_PATH}/${remote_file}")
         fi
+    # shellcheck disable=SC2029 # lokal ekspansjon tilsiktet — verdier validert i check_requirements()
     done < <(ssh "${SSH_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" ls "${HETZNER_BACKUP_PATH}" 2>/dev/null)
 
     if [[ ${#files_to_delete[@]} -gt 0 ]]; then
         log "Sletter ${#files_to_delete[@]} gammel(e) offsite backup(s)..."
+        # shellcheck disable=SC2029 # lokal ekspansjon tilsiktet — verdier validert i check_requirements()
         ssh "${SSH_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" \
             rm "${files_to_delete[@]}" 2>/dev/null || true
     fi
