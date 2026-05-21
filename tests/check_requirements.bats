@@ -68,3 +68,99 @@ teardown() {
     [ "$status" -eq 0 ]
     [[ "$output" != *"BACKUP_SCHEDULE har feil"* ]]
 }
+
+@test "PROJECT_NAME med semikolon avvises" {
+    export PROJECT_NAME="test;rm"
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"PROJECT_NAME"* ]]
+}
+
+@test "PROJECT_NAME med slash avvises" {
+    export PROJECT_NAME="test/subdir"
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"PROJECT_NAME"* ]]
+}
+
+@test "PROJECT_NAME med gyldig navn aksepteres" {
+    export PROJECT_NAME=mitt-prosjekt.v2
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"ugyldig"* ]]
+}
+
+@test "HETZNER_BACKUP_PATH med semikolon avvises nar Hetzner er konfigurert" {
+    export PROJECT_NAME=testprosjekt
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    export HETZNER_HOST=hetzner.example.com
+    export HETZNER_USER=u12345
+    export HETZNER_BACKUP_PATH="backups/test;rm -rf /"
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"HETZNER_BACKUP_PATH"* ]]
+}
+
+@test "HETZNER_BACKUP_PATH med path-traversal avvises" {
+    export PROJECT_NAME=testprosjekt
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    export HETZNER_HOST=hetzner.example.com
+    export HETZNER_USER=u12345
+    export HETZNER_BACKUP_PATH="backups/../../../etc"
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"HETZNER_BACKUP_PATH"* ]]
+}
+
+@test "HETZNER_BACKUP_PATH med gyldig sti aksepteres" {
+    export PROJECT_NAME=testprosjekt
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    export HETZNER_HOST=hetzner.example.com
+    export HETZNER_USER=u12345
+    export HETZNER_BACKUP_PATH="backups/testprosjekt"
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"HETZNER_BACKUP_PATH"* ]]
+}
+
+@test "HETZNER_BACKUP_PATH valideres ikke nar Hetzner ikke er konfigurert" {
+    export PROJECT_NAME=testprosjekt
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    unset HETZNER_HOST
+    export HETZNER_BACKUP_PATH="backups/test;rm -rf /"
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -eq 0 ]
+}
+
+@test "HETZNER_HOST med spesialtegn avvises" {
+    export PROJECT_NAME=testprosjekt
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    export HETZNER_HOST="hetzner.example.com;evil"
+    export HETZNER_USER=u12345
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"HETZNER_HOST"* ]]
+}
+
+@test "HETZNER_PORT med ikke-numerisk verdi avvises" {
+    export PROJECT_NAME=testprosjekt
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    export HETZNER_HOST=hetzner.example.com
+    export HETZNER_USER=u12345
+    export HETZNER_PORT="23 -o ProxyCommand=evil"
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"HETZNER_PORT"* ]]
+}
