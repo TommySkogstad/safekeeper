@@ -101,6 +101,17 @@ teardown() {
     [[ "$output" == *"Maalmappe finnes ikke"* ]]
 }
 
+@test "restore_wrong_password_test" {
+    export BACKUP_ENCRYPTION_KEY=testnokkel
+    local backup_file="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
+    # Gyldig gzip-innhold slik at gunzip passerer og psql naas i pipelinen
+    printf 'SELECT 1;\n' | gzip > "$backup_file"
+
+    STUB_PSQL_FAIL=1 run bash "$SAFEKEEPER_ROOT/restore.sh" "$backup_file"
+    [ "$status" -ne 0 ]
+    [[ "$output" != *"Gjenoppretting fullfort!"* ]]
+}
+
 @test "restore.sh gjenoppretter fil-backup til maalmappe" {
     export BACKUP_ENCRYPTION_KEY=testnokkel
     local target_dir
