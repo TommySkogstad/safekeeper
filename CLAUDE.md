@@ -191,7 +191,7 @@ gh run list --repo TommySkogstad/safekeeper --limit 5
 - **set -euo pipefail**: Alle skript bruker streng feilhandtering.
 - **Eksplisitte advarsler ved kritiske operasjoner**: Operasjoner som `mkdir`, `rm`, `find -delete` og checksum-verifikasjoner må aldri silently feile med `|| true`. I stedet: logg `ADVARSEL` med kontekst og returner feilkode. Eksempler: mkdir som mislykkes skal sjekke `test -d` og advare hvis både create og verify feiler; rm som mislykkes skal advare om rettigheter; find som mislykkes skal advare om disk-problemer.
 - **Healthcheck**: Containeren skriver `/tmp/last-backup-success` med timestamp når BÅDE database-backup og fil-backup (hvis konfigurert) er vellykkede. Healthcheck sjekker at siste backup var innen `BACKUP_HEALTHCHECK_WINDOW` sekunder (default 93600 = 26 timer).
-- **Retry-logikk**: Hetzner-opplasting prover 3 ganger med eksponentiell backoff (5s, 10s, 20s).
+- **Retry-logikk**: Hetzner-opplasting prover `BACKUP_RETRY_MAX` ganger (default 3) med eksponentiell backoff (startverdi `BACKUP_RETRY_DELAY` sekunder, default 5s).
 - **Retention**: Gamle backups slettes automatisk bade lokalt og pa Hetzner etter `BACKUP_RETENTION_DAYS`.
 - **Initial backup**: Ved oppstart kjores en backup umiddelbart for cron settes opp.
 - **Linting**: ShellCheck for bash, Hadolint for Dockerfile. Begge ma passere i CI.
