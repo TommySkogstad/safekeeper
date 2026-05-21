@@ -40,7 +40,7 @@ HETZNER_BACKUP_PATH="${HETZNER_BACKUP_PATH:-backups/${PROJECT_NAME}}"
 
 # SSH-nokkel via mktemp (ryddes opp via trap)
 SSH_KEY=$(mktemp)
-SSH_OPTS="-i ${SSH_KEY} -o StrictHostKeyChecking=accept-new -o BatchMode=yes -p ${HETZNER_PORT}"
+SSH_OPTS=(-i "${SSH_KEY}" -o StrictHostKeyChecking=accept-new -o BatchMode=yes -p "${HETZNER_PORT}")
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"; }
 error() { log "ERROR: $1" >&2; exit 1; }
@@ -72,6 +72,19 @@ check_requirements() {
     [[ -n "$BACKUP_ENCRYPTION_KEY" ]] || error "Manglende miljovariabel: BACKUP_ENCRYPTION_KEY. Kryptering er pakrevd."
     validate_cron_schedule "$BACKUP_SCHEDULE"
 
+    [[ "$PROJECT_NAME" =~ ^[a-zA-Z0-9._-]{1,64}$ ]] || error "PROJECT_NAME inneholder ugyldige tegn: '$PROJECT_NAME'"
+
+    if [[ -n "$HETZNER_HOST" ]]; then
+        [[ "$HETZNER_HOST" =~ ^[a-zA-Z0-9.-]+$ ]] || error "HETZNER_HOST inneholder ugyldige tegn: '$HETZNER_HOST'"
+        if [[ -n "$HETZNER_USER" ]]; then
+            [[ "$HETZNER_USER" =~ ^[a-zA-Z0-9_-]+$ ]] || error "HETZNER_USER inneholder ugyldige tegn: '$HETZNER_USER'"
+        fi
+        [[ "$HETZNER_PORT" =~ ^[0-9]+$ ]] && [[ "$HETZNER_PORT" -ge 1 ]] && [[ "$HETZNER_PORT" -le 65535 ]] \
+            || error "HETZNER_PORT er ugyldig: '$HETZNER_PORT'"
+        [[ "$HETZNER_BACKUP_PATH" =~ ^[a-zA-Z0-9._/-]+$ ]] || error "HETZNER_BACKUP_PATH inneholder ugyldige tegn: '$HETZNER_BACKUP_PATH'"
+        [[ "$HETZNER_BACKUP_PATH" != *".."* ]] || error "HETZNER_BACKUP_PATH kan ikke inneholde '..'"
+    fi
+
     # Kopier SSH-nokkel med riktige tillatelser (montert nokkel kan ha feil eierskap)
     if [[ -f /root/.ssh/id_ed25519 ]]; then
         cp /root/.ssh/id_ed25519 "${SSH_KEY}"
@@ -102,8 +115,8 @@ upload_to_hetzner() {
     for part in "${path_parts[@]}"; do
         [[ -z "$part" ]] && continue
         current_path="${current_path:+${current_path}/}${part}"
-        # shellcheck disable=SC2086,SC2029
-        ssh ${SSH_OPTS} "${HETZNER_USER}@${HETZNER_HOST}" "mkdir \"${current_path}\"" 2>/dev/null || true
+        # shellcheck disable=SC2029 # lokal ekspansjon tilsiktet — verdier validert i check_requirements()
+        ssh "${SSH_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" mkdir "${current_path}" 2>/dev/null || true
     done
 
     # Generer checksum for verifisering etter opplasting
@@ -120,9 +133,9 @@ upload_to_hetzner() {
 
     # Verifiser checksum pa Hetzner
     local remote_sha256
-    # shellcheck disable=SC2086,SC2029
-    remote_sha256=$(ssh ${SSH_OPTS} "${HETZNER_USER}@${HETZNER_HOST}" \
-        "sha256sum ${HETZNER_BACKUP_PATH}/${filename}" 2>/dev/null | cut -d' ' -f1 || echo "")
+    # shellcheck disable=SC2029 # lokal ekspansjon tilsiktet — verdier validert i check_requirements()
+    remote_sha256=$(ssh "${SSH_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" \
+        sha256sum "${HETZNER_BACKUP_PATH}/${filename}" 2>/dev/null | cut -d' ' -f1 || echo "")
 
     if [[ "$local_sha256" == "$remote_sha256" ]]; then
         log "Offsite backup lastet opp og verifisert: ${HETZNER_BACKUP_PATH}/${filename}"
@@ -145,7 +158,7 @@ cleanup_hetzner() {
     [[ -z "$cutoff_ts" ]] && return 0
 
     local files_to_delete=()
-    # shellcheck disable=SC2086,SC2029
+    # shellcheck disable=SC2029 # lokal ekspansjon tilsiktet — verdier validert i check_requirements()
     while read -r remote_file; do
         if [[ ! "$remote_file" =~ ^[a-zA-Z0-9._-]+$ ]]; then
             log "ADVARSEL: Avvist filnavn med ugyldige tegn: $remote_file"
@@ -157,13 +170,13 @@ cleanup_hetzner() {
             log "Markerer for sletting: $remote_file"
             files_to_delete+=("${HETZNER_BACKUP_PATH}/${remote_file}")
         fi
-    done < <(ssh ${SSH_OPTS} "${HETZNER_USER}@${HETZNER_HOST}" "ls ${HETZNER_BACKUP_PATH}" 2>/dev/null)
+    done < <(ssh "${SSH_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" ls "${HETZNER_BACKUP_PATH}" 2>/dev/null)
 
     if [[ ${#files_to_delete[@]} -gt 0 ]]; then
         log "Sletter ${#files_to_delete[@]} gammel(e) offsite backup(s)..."
-        # shellcheck disable=SC2086,SC2029
-        ssh ${SSH_OPTS} "${HETZNER_USER}@${HETZNER_HOST}" \
-            "rm $(printf '"%s" ' "${files_to_delete[@]}")" 2>/dev/null || true
+        # shellcheck disable=SC2029 # lokal ekspansjon tilsiktet — verdier validert i check_requirements()
+        ssh "${SSH_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" \
+            rm "${files_to_delete[@]}" 2>/dev/null || true
     fi
 }
 
