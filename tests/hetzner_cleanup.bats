@@ -91,6 +91,16 @@ testprosjekt_20200103_030000.sql.gz.gpg"
     echo "$output" | grep -q "ADVARSEL"
 }
 
+@test "cleanup_hetzner logger advarsel naar SSH rm-kommando feiler" {
+    export STUB_SSH_LS_OUTPUT="testprosjekt_20200101_030000.sql.gz.gpg"
+    export STUB_SSH_RM_FAIL=1
+
+    load_backup_lib
+    run cleanup_hetzner
+
+    [[ "$output" == *"ADVARSEL"* ]]
+}
+
 @test "cleanup_hetzner behandler gyldige filnavn normalt" {
     export STUB_SSH_LS_OUTPUT="testprosjekt_20200101_030000.sql.gz.gpg
 testprosjekt_20200102_030000.sql.gz.gpg"

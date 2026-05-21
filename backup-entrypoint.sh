@@ -116,7 +116,9 @@ upload_to_hetzner() {
         [[ -z "$part" ]] && continue
         current_path="${current_path:+${current_path}/}${part}"
         # shellcheck disable=SC2029 # lokal ekspansjon tilsiktet — verdier validert i check_requirements()
-        ssh "${SSH_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" mkdir "${current_path}" 2>/dev/null || true
+        ssh "${SSH_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" mkdir "${current_path}" 2>/dev/null \
+            || ssh "${SSH_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" test -d "${current_path}" \
+            || { log "ADVARSEL: Kan ikke opprette eller bekrefte katalog '${current_path}' på Hetzner"; return 1; }
     done
 
     # Generer checksum for verifisering etter opplasting
@@ -140,7 +142,8 @@ upload_to_hetzner() {
     if [[ "$local_sha256" == "$remote_sha256" ]]; then
         log "Offsite backup lastet opp og verifisert: ${HETZNER_BACKUP_PATH}/${filename}"
     elif [[ -z "$remote_sha256" ]]; then
-        log "ADVARSEL: Kunne ikke verifisere checksum pa Hetzner (sha256sum utilgjengelig)"
+        log "ADVARSEL: Kunne ikke verifisere checksum på Hetzner (sha256sum utilgjengelig) — regnes som opplastingsfeil"
+        return 1
     else
         log "ADVARSEL: Checksum-mismatch etter opplasting! Lokal=$local_sha256 Remote=$remote_sha256"
         return 1
@@ -176,7 +179,8 @@ cleanup_hetzner() {
         log "Sletter ${#files_to_delete[@]} gammel(e) offsite backup(s)..."
         # shellcheck disable=SC2029 # lokal ekspansjon tilsiktet — verdier validert i check_requirements()
         ssh "${SSH_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" \
-            rm "${files_to_delete[@]}" 2>/dev/null || true
+            rm "${files_to_delete[@]}" \
+            || log "ADVARSEL: Sletting av gamle Hetzner-backups feilet — filer kan akkumulere"
     fi
 }
 
@@ -230,10 +234,13 @@ run_backup() {
     upload_with_retry "${backup_file}.sha256"
 
     # Slett lokale backups eldre enn BACKUP_RETENTION_DAYS
-    find "$BACKUP_DIR" -name "${PROJECT_NAME}_*.sql.gz.gpg" -mtime "+${BACKUP_RETENTION_DAYS}" -delete 2>/dev/null || true
-    find "$BACKUP_DIR" -name "${PROJECT_NAME}_*.sql.gz.gpg.sha256" -mtime "+${BACKUP_RETENTION_DAYS}" -delete 2>/dev/null || true
+    find "$BACKUP_DIR" -name "${PROJECT_NAME}_*.sql.gz.gpg" -mtime "+${BACKUP_RETENTION_DAYS}" -delete \
+        || log "ADVARSEL: Fjerning av gamle lokale DB-backups feilet — sjekk rettigheter på $BACKUP_DIR"
+    find "$BACKUP_DIR" -name "${PROJECT_NAME}_*.sql.gz.gpg.sha256" -mtime "+${BACKUP_RETENTION_DAYS}" -delete \
+        || log "ADVARSEL: Fjerning av gamle lokale checksum-filer feilet — sjekk rettigheter på $BACKUP_DIR"
     # Rydd opp eventuelle gamle ukrypterte backups
-    find "$BACKUP_DIR" -name "${PROJECT_NAME}_*.sql.gz" -not -name "*.gpg" -mtime "+${BACKUP_RETENTION_DAYS}" -delete 2>/dev/null || true
+    find "$BACKUP_DIR" -name "${PROJECT_NAME}_*.sql.gz" -not -name "*.gpg" -mtime "+${BACKUP_RETENTION_DAYS}" -delete \
+        || log "ADVARSEL: Fjerning av gamle ukrypterte lokale backups feilet — sjekk rettigheter på $BACKUP_DIR"
 
     # Slett gamle backups pa Hetzner
     cleanup_hetzner
@@ -296,10 +303,13 @@ backup_files() {
     upload_with_retry "${backup_file}.sha256"
 
     # Rydd opp gamle fil-backups
-    find "$BACKUP_DIR" -name "${PROJECT_NAME}_files_*.tar.gz.gpg" -mtime "+${BACKUP_RETENTION_DAYS}" -delete 2>/dev/null || true
-    find "$BACKUP_DIR" -name "${PROJECT_NAME}_files_*.tar.gz.gpg.sha256" -mtime "+${BACKUP_RETENTION_DAYS}" -delete 2>/dev/null || true
+    find "$BACKUP_DIR" -name "${PROJECT_NAME}_files_*.tar.gz.gpg" -mtime "+${BACKUP_RETENTION_DAYS}" -delete \
+        || log "ADVARSEL: Fjerning av gamle lokale fil-backups feilet — sjekk rettigheter på $BACKUP_DIR"
+    find "$BACKUP_DIR" -name "${PROJECT_NAME}_files_*.tar.gz.gpg.sha256" -mtime "+${BACKUP_RETENTION_DAYS}" -delete \
+        || log "ADVARSEL: Fjerning av gamle lokale fil-backup checksum-filer feilet — sjekk rettigheter på $BACKUP_DIR"
     # Rydd opp eventuelle gamle ukrypterte fil-backups
-    find "$BACKUP_DIR" -name "${PROJECT_NAME}_files_*.tar.gz" -not -name "*.gpg" -mtime "+${BACKUP_RETENTION_DAYS}" -delete 2>/dev/null || true
+    find "$BACKUP_DIR" -name "${PROJECT_NAME}_files_*.tar.gz" -not -name "*.gpg" -mtime "+${BACKUP_RETENTION_DAYS}" -delete \
+        || log "ADVARSEL: Fjerning av gamle ukrypterte lokale fil-backups feilet — sjekk rettigheter på $BACKUP_DIR"
 
     log "Fil-backup fullfort OK"
 }

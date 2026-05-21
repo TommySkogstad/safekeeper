@@ -28,11 +28,11 @@ teardown() {
     rm -rf "$BACKUP_DIR"
 }
 
-# Laster backup-entrypoint.sh som bibliotek uten aa kjore main.
-# Populerer deretter SSH_KEY saa hetzner_configured returnerer sant.
+# Laster backup-entrypoint.sh som bibliotek uten main og uten set -euo pipefail
+# (set -euo pipefail forstyrrer BATS sin feilhåndtering i testsuiten).
 load_backup_lib() {
     local stripped
-    stripped=$(sed 's|^main "\$@".*$|:|' "$SAFEKEEPER_ROOT/backup-entrypoint.sh")
+    stripped=$(sed 's|^main "\$@".*$|:|; s|^set -euo pipefail.*$|:|; s|^trap cleanup EXIT.*$|:|' "$SAFEKEEPER_ROOT/backup-entrypoint.sh")
     eval "$stripped"
     echo "dummy-ssh-key" > "$SSH_KEY"
 }
@@ -73,13 +73,25 @@ load_backup_lib() {
     [[ "$output" == *"forsok 2/3"* ]]
 }
 
-@test "upload_to_hetzner logger advarsel og returnerer 0 ved tom sha256sum-respons" {
+@test "upload_to_hetzner logger advarsel og returnerer 1 ved tom sha256sum-respons" {
     load_backup_lib
 
     local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
     echo "content" > "$dummy"
 
     run upload_to_hetzner "$dummy"
-    [ "$status" -eq 0 ]
+    [ "$status" -eq 1 ]
     [[ "$output" == *"Kunne ikke verifisere checksum"* ]]
+}
+
+@test "upload_to_hetzner returnerer 1 og logger katalog-feil naar mkdir og test-d begge feiler paa Hetzner" {
+    export STUB_SSH_FAIL=1
+    load_backup_lib
+
+    local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
+    echo "content" > "$dummy"
+
+    run upload_to_hetzner "$dummy"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"katalog"* ]]
 }

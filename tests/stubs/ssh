@@ -7,6 +7,7 @@
 #
 # Opt-in kallregistrering: sett STUB_SSH_CALL_LOG til en fil for å logge kall.
 # Opt-in ls-output: sett STUB_SSH_LS_OUTPUT for å returnere filnavn ved ls-kommandoer.
+# Opt-in rm-feil: sett STUB_SSH_RM_FAIL=1 for å simulere at rm-kommandoer feiler.
 
 [[ "${STUB_SSH_FAIL:-0}" == "1" ]] && exit 1
 
@@ -20,6 +21,10 @@ fi
 
 if [[ "${STUB_SSH_WRONG_CHECKSUM:-0}" == "1" ]] && [[ "$*" == *"sha256sum"* ]]; then
     echo "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  /stub/file"
+fi
+
+if [[ "${STUB_SSH_RM_FAIL:-0}" == "1" ]] && [[ "$*" == *" rm "* ]]; then
+    exit 1
 fi
 
 exit 0
