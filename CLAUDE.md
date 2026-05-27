@@ -27,7 +27,7 @@ Docker Compose (per app)
             +-- cleanup (retention lokalt + Hetzner)
 ```
 
-**Baseimage:** `postgres:16.13-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50` (gir tilgang til `pg_dump`, `pg_isready`, `psql`)
+**Baseimage:** `postgres:16.14-alpine@sha256:16bc17c64a573ef34162af9298258d1aec548232985b33ed7b1eac33ba35c229` (gir tilgang til `pg_dump`, `pg_isready`, `psql`)
 
 **Ekstra pakker:** bash, gzip, gnupg, openssh-client, tzdata
 
@@ -39,7 +39,7 @@ Docker Compose (per app)
 |-----|-------------|
 | `backup-entrypoint.sh` | Hovedskript - backup, kryptering, opplasting, opprydding, cron |
 | `restore.sh` | Gjenoppretting fra lokal backup-fil |
-| `Dockerfile` | Docker-image basert pa postgres:16.13-alpine (pinnet til digest) |
+| `Dockerfile` | Docker-image basert pa postgres:16.14-alpine (pinnet til digest) |
 
 ### Backup-flyt
 
@@ -125,7 +125,7 @@ Sensitive filer ryddes opp via `trap EXIT`:
 - `StrictHostKeyChecking=accept-new` (TOFU-modell - aksepterer nye nokler, avviser endrede)
 - `BatchMode=yes` (ingen interaktive prompts)
 - Port 23 (Hetzner StorageBox standard)
-- **Dato-ekstraksjon**: `cleanup_hetzner` bruker POSIX sed (ikke `grep -oP`), siden BusyBox grep i postgres:16.13-alpine ikke støtter Perl-regex
+- **Dato-ekstraksjon**: `cleanup_hetzner` bruker POSIX sed (ikke `grep -oP`), siden BusyBox grep i postgres:16.14-alpine ikke støtter Perl-regex
 
 ### Filpermisjon
 
@@ -237,10 +237,12 @@ backup:
 
 | App | NAS-sti | Hetzner StorageBox | Schedule |
 |-----|---------|-------------------|----------|
-| biologportal | `/mnt/nas-apps/biologportal/backups` | u554595 (Helsinki) | `0 3 * * *` |
-| 6810 | `/mnt/nas-apps/6810/backups` | Venter pa opprettelse | `0 5 * * *` |
+| biologportal | `/mnt/nas-apps/biologportal/backups` | u554595 (Helsinki) | `50 1 * * *` |
+| 6810 | `/mnt/nas-apps/6810/backups` | Venter pa opprettelse | `0 2 * * *` |
 | styreportal | `/mnt/nas-apps/styreportal/backups` | Venter pa opprettelse | `30 1 * * *` |
-| smart-casual | `/mnt/nas-apps/smart-casual/backups` | Ikke satt opp | `0 5 * * *` |
+| maskemester | `/mnt/nas-apps/maskemester/backups` | Ikke satt opp | `0 5 * * *` |
+| vinforalle | `/mnt/nas-apps/vinforalle/backups` | Ikke satt opp | `0 5 * * *` |
+| smart-casual | — | — | Ikke konfigurert |
 
 ### Kryssrepo-avhengigheter
 
