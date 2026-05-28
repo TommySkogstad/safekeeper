@@ -26,7 +26,6 @@ BACKUP_ENCRYPTION_KEY="${BACKUP_ENCRYPTION_KEY:-}"
 DB_WAIT_TIMEOUT="${DB_WAIT_TIMEOUT:-60}"
 BACKUP_RETRY_MAX="${BACKUP_RETRY_MAX:-3}"
 BACKUP_RETRY_DELAY="${BACKUP_RETRY_DELAY:-5}"
-BACKUP_HEALTHCHECK_WINDOW="${BACKUP_HEALTHCHECK_WINDOW:-93600}"
 
 # Interne fil-stier (kan overstyres i tester via env-variabler)
 SAFEKEEPER_ENV_FILE="${SAFEKEEPER_ENV_FILE:-/etc/safekeeper.env}"
@@ -81,8 +80,6 @@ check_requirements() {
         || error "BACKUP_RETRY_MAX må være et positivt heltall >= 1, fikk: '$BACKUP_RETRY_MAX'"
     [[ "$BACKUP_RETRY_DELAY" =~ ^[0-9]+$ ]] && [[ "$BACKUP_RETRY_DELAY" -ge 1 ]] \
         || error "BACKUP_RETRY_DELAY må være et positivt heltall >= 1, fikk: '$BACKUP_RETRY_DELAY'"
-    [[ "$BACKUP_HEALTHCHECK_WINDOW" =~ ^[0-9]+$ ]] && [[ "$BACKUP_HEALTHCHECK_WINDOW" -ge 1 ]] \
-        || error "BACKUP_HEALTHCHECK_WINDOW må være et positivt heltall >= 1, fikk: '$BACKUP_HEALTHCHECK_WINDOW'"
 
     if [[ -n "$HETZNER_HOST" ]]; then
         [[ "$HETZNER_HOST" =~ ^[a-zA-Z0-9.-]+$ ]] || error "HETZNER_HOST inneholder ugyldige tegn: '$HETZNER_HOST'"

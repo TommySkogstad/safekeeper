@@ -40,7 +40,6 @@ Alt styres via miljovariabler - ingen prosjektspesifikk kode.
 | `BACKUP_ENCRYPTION_KEY` | GPG-krypteringsnokkel (AES256) | - | Ja |
 | `BACKUP_RETRY_MAX` | Maks antall Hetzner-opplastingsforsøk | `3` | Nei |
 | `BACKUP_RETRY_DELAY` | Startverdien (sekunder) for eksponentiell backoff ved retry | `5` | Nei |
-| `BACKUP_HEALTHCHECK_WINDOW` | Maks alder (sekunder) på siste vellykkede backup for healthcheck | `93600` | Nei |
 | `FILES_DIR` | Katalog for fil-backup | (tom = deaktivert) | Nei |
 | `HETZNER_HOST` | Hetzner StorageBox hostname | (tom = deaktivert) | Nei |
 | `HETZNER_USER` | Hetzner StorageBox brukernavn | (tom) | Nei |
@@ -56,7 +55,7 @@ backup:
     dockerfile: Dockerfile
   restart: unless-stopped
   healthcheck:
-    test: ["CMD-SHELL", "test -f /tmp/last-backup-success && [ $(($(date +%s) - $(cat /tmp/last-backup-success))) -lt ${BACKUP_HEALTHCHECK_WINDOW:-93600} ]"]
+    test: ["CMD-SHELL", "test -f /tmp/last-backup-success && [ $(($(date +%s) - $(cat /tmp/last-backup-success))) -lt 93600 ]"]
     interval: 60s
     timeout: 10s
     retries: 3
@@ -72,7 +71,6 @@ backup:
     BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-0 3 * * *}
     BACKUP_RETRY_MAX: ${BACKUP_RETRY_MAX:-3}
     BACKUP_RETRY_DELAY: ${BACKUP_RETRY_DELAY:-5}
-    BACKUP_HEALTHCHECK_WINDOW: ${BACKUP_HEALTHCHECK_WINDOW:-93600}
     BACKUP_DIR: /backups
     BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:?Sett BACKUP_ENCRYPTION_KEY i .env}
     HETZNER_HOST: ${HETZNER_HOST:-}
@@ -89,7 +87,7 @@ backup:
     - internal
 ```
 
-**Healthcheck**: Sjekker at siste backup var vellykket innen 26 timer (93600 sekunder). Containeren rapporterer `unhealthy` hvis backup ikke har kjort.
+**Healthcheck**: Sjekker at siste backup var vellykket innen 26 timer (93600 sekunder). Vinduet styres av consumer-appens docker-compose og kan tilpasses direkte i `test`-linjen. Containeren rapporterer `unhealthy` hvis backup ikke har kjort.
 
 ## Hetzner StorageBox oppsett
 
