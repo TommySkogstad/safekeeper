@@ -164,3 +164,13 @@ teardown() {
     [ "$status" -ne 0 ]
     [[ "$output" == *"HETZNER_PORT"* ]]
 }
+
+@test "BACKUP_HEALTHCHECK_WINDOW ignoreres av entrypoint (eies av consumer docker-compose)" {
+    export PROJECT_NAME=testprosjekt
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    export BACKUP_HEALTHCHECK_WINDOW="ikke-et-tall"
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"BACKUP_HEALTHCHECK_WINDOW"* ]]
+}
