@@ -37,6 +37,16 @@ teardown() {
     [[ "$output" == *"BACKUP_ENCRYPTION_KEY"* ]]
 }
 
+@test "restore.sh feiler hvis DB_PASSWORD mangler for database-gjenoppretting" {
+    export BACKUP_ENCRYPTION_KEY=testnokkel
+    local backup_file="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
+    echo "dummy" > "$backup_file"
+    unset DB_PASSWORD
+    run bash "$SAFEKEEPER_ROOT/restore.sh" "$backup_file"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"DB_PASSWORD"* ]]
+}
+
 @test "restore.sh feiler ved checksum-mismatch" {
     export BACKUP_ENCRYPTION_KEY=testnokkel
     local backup_file="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
