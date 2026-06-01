@@ -42,7 +42,8 @@ HETZNER_BACKUP_PATH="${HETZNER_BACKUP_PATH:-backups/${PROJECT_NAME}}"
 
 # SSH-nokkel via mktemp (ryddes opp via trap)
 SSH_KEY=$(mktemp)
-SSH_OPTS=(-i "${SSH_KEY}" -o StrictHostKeyChecking=accept-new -o BatchMode=yes -p "${HETZNER_PORT}")
+# sftp bruker -P (stor bokstav) for port, -q for stille modus
+SFTP_OPTS=(-q -i "${SSH_KEY}" -o StrictHostKeyChecking=accept-new -o BatchMode=yes -P "${HETZNER_PORT}")
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"; }
 error() { log "ERROR: $1" >&2; exit 1; }
@@ -115,22 +116,19 @@ upload_to_hetzner() {
 
     log "Laster opp til Hetzner StorageBox ($HETZNER_HOST)..."
 
-    # Opprett mapper hvis de ikke finnes (ett niva om gangen - Hetzner stotter ikke mkdir -p)
+    # Opprett mapper hvis de ikke finnes (ett nivå om gangen — Hetzner støtter ikke mkdir -p).
+    # Bruker SFTP batch: -mkdir (med bindestrek) er non-fatal og feiler stille om katalogen
+    # allerede finnes; ls uten bindestrek verifiserer at katalogen eksisterer etter forsøket.
     local path_parts
     IFS='/' read -ra path_parts <<< "${HETZNER_BACKUP_PATH}"
     local current_path=""
     for part in "${path_parts[@]}"; do
         [[ -z "$part" ]] && continue
         current_path="${current_path:+${current_path}/}${part}"
-        # shellcheck disable=SC2029 # lokal ekspansjon tilsiktet — verdier validert i check_requirements()
-        ssh "${SSH_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" mkdir "${current_path}" 2>/dev/null \
-            || ssh "${SSH_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" test -d "${current_path}" \
+        printf -- '-mkdir %s\nls %s\n' "${current_path}" "${current_path}" \
+            | sftp "${SFTP_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" >/dev/null 2>&1 \
             || { log "ADVARSEL: Kan ikke opprette eller bekrefte katalog '${current_path}' på Hetzner"; return 1; }
     done
-
-    # Generer checksum for verifisering etter opplasting
-    local local_sha256
-    local_sha256=$(sha256sum "$backup_file" | cut -d' ' -f1)
 
     if ! scp -P "${HETZNER_PORT}" -i "${SSH_KEY}" \
         -o StrictHostKeyChecking=accept-new -o BatchMode=yes \
@@ -140,19 +138,21 @@ upload_to_hetzner() {
         return 1
     fi
 
-    # Verifiser checksum pa Hetzner
-    local remote_sha256
-    # shellcheck disable=SC2029 # lokal ekspansjon tilsiktet — verdier validert i check_requirements()
-    remote_sha256=$(ssh "${SSH_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" \
-        sha256sum "${HETZNER_BACKUP_PATH}/${filename}" 2>/dev/null | cut -d' ' -f1 || echo "")
+    # Verifiser opplastet fil via SFTP ls -la (sha256sum ikke tilgjengelig i SFTP-only modus).
+    # Sammenligner filstørrelse lokalt vs. på Hetzner.
+    local local_size remote_size
+    local_size=$(wc -c < "$backup_file")
+    remote_size=$(printf 'ls -la %s/%s\n' "${HETZNER_BACKUP_PATH}" "${filename}" \
+        | sftp "${SFTP_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" 2>/dev/null \
+        | awk 'NF >= 9 && /^[-dl]/ {print $5}' | grep -E '^[0-9]+$' | head -1 || echo "")
 
-    if [[ "$local_sha256" == "$remote_sha256" ]]; then
-        log "Offsite backup lastet opp og verifisert: ${HETZNER_BACKUP_PATH}/${filename}"
-    elif [[ -z "$remote_sha256" ]]; then
-        log "ADVARSEL: Kunne ikke verifisere checksum på Hetzner (sha256sum utilgjengelig) — regnes som opplastingsfeil"
+    if [[ -n "$remote_size" ]] && [[ "$remote_size" -eq "$local_size" ]]; then
+        log "Offsite backup lastet opp og verifisert (${remote_size} bytes): ${HETZNER_BACKUP_PATH}/${filename}"
+    elif [[ -z "$remote_size" ]]; then
+        log "ADVARSEL: Kunne ikke bekrefte opplastet fil på Hetzner — regnes som opplastingsfeil"
         return 1
     else
-        log "ADVARSEL: Checksum-mismatch etter opplasting! Lokal=$local_sha256 Remote=$remote_sha256"
+        log "ADVARSEL: Størrelsesmismatch etter opplasting! Lokal=${local_size} Remote=${remote_size}"
         return 1
     fi
 }
@@ -172,7 +172,6 @@ cleanup_hetzner() {
     [[ -z "$cutoff_ts" ]] && { log "ADVARSEL: Klarte ikke beregne dato-cutoff for Hetzner cleanup — sjekk BACKUP_RETENTION_DAYS='${BACKUP_RETENTION_DAYS}'"; return 1; }
 
     local files_to_delete=()
-    # shellcheck disable=SC2029 # lokal ekspansjon tilsiktet — verdier validert i check_requirements()
     while read -r remote_file; do
         if [[ ! "$remote_file" =~ ^[a-zA-Z0-9._-]+$ ]]; then
             log "ADVARSEL: Avvist filnavn med ugyldige tegn: $remote_file"
@@ -184,13 +183,18 @@ cleanup_hetzner() {
             log "Markerer for sletting: $remote_file"
             files_to_delete+=("${HETZNER_BACKUP_PATH}/${remote_file}")
         fi
-    done < <(ssh "${SSH_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" ls "${HETZNER_BACKUP_PATH}" 2>/dev/null)
+    done < <(printf 'ls -la %s\n' "${HETZNER_BACKUP_PATH}" \
+        | sftp "${SFTP_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" 2>/dev/null \
+        | awk 'NF >= 9 && /^[-dl]/ && $NF !~ /^\.$|^\.\.$/ {print $NF}')
 
     if [[ ${#files_to_delete[@]} -gt 0 ]]; then
         log "Sletter ${#files_to_delete[@]} gammel(e) offsite backup(s)..."
-        # shellcheck disable=SC2029 # lokal ekspansjon tilsiktet — verdier validert i check_requirements()
-        ssh "${SSH_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" \
-            rm "${files_to_delete[@]}" \
+        local sftp_rm_batch=""
+        for f in "${files_to_delete[@]}"; do
+            sftp_rm_batch+="rm ${f}"$'\n'
+        done
+        printf '%s' "$sftp_rm_batch" \
+            | sftp "${SFTP_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" >/dev/null 2>&1 \
             || log "ADVARSEL: Sletting av gamle Hetzner-backups feilet — filer kan akkumulere"
     fi
 }

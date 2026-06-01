@@ -1,8 +1,8 @@
 #!/usr/bin/env bats
 #
 # Tester for cleanup_hetzner() i backup-entrypoint.sh.
-# Verifiserer at sletting av gamle Hetzner-backups gjøres med én SSH rm-kommando
-# uansett antall filer (ikke N+1 SSH-tilkoblinger).
+# Verifiserer at sletting av gamle Hetzner-backups gjøres via SFTP batch
+# med minimalt antall sftp-prosess-kall.
 
 load 'helpers/common'
 
@@ -18,15 +18,15 @@ setup() {
     export HETZNER_USER=u12345
     export BACKUP_RETENTION_DAYS=30
 
-    STUB_SSH_CALL_LOG="$(mktemp)"
-    export STUB_SSH_CALL_LOG
+    STUB_SFTP_CALL_LOG="$(mktemp)"
+    export STUB_SFTP_CALL_LOG
 
-    unset STUB_SCP_FAIL STUB_SSH_FAIL STUB_SSH_LS_OUTPUT
+    unset STUB_SCP_FAIL STUB_SFTP_FAIL STUB_SFTP_LS_OUTPUT STUB_SFTP_RM_FAIL
 }
 
 teardown() {
     rm -rf "$BACKUP_DIR"
-    rm -f "${STUB_SSH_CALL_LOG:-}"
+    rm -f "${STUB_SFTP_CALL_LOG:-}"
 }
 
 # Laster backup-entrypoint.sh som bibliotek uten main og uten set -euo pipefail
@@ -39,61 +39,78 @@ load_backup_lib() {
     echo "dummy-ssh-key" > "$SSH_KEY"
 }
 
-@test "cleanup_hetzner gjør maks 2 SSH-kall (ls + rm) for 3 gamle filer" {
+# ls -la-formatert linje (permissions links owner group size month day time name)
+ls_la_line() {
+    echo "-rw-r--r--    1 u12345  u12345      12345 Jan  1 2020 ${1}"
+}
+
+# Teller antall sftp-prosess-invokasjonar (linjer uten CMD:-prefiks i CALL_LOG)
+sftp_process_count() {
+    grep -v '^CMD:' "$STUB_SFTP_CALL_LOG" 2>/dev/null | wc -l | tr -d ' '
+}
+
+@test "cleanup_hetzner gjoor maks 2 SFTP-prosess-kall (ls-la + rm) for 3 gamle filer" {
     # Cutoff blir i dag - 30 dager; filer fra 2020 er garantert eldre
-    export STUB_SSH_LS_OUTPUT="testprosjekt_20200101_030000.sql.gz.gpg
-testprosjekt_20200102_030000.sql.gz.gpg
-testprosjekt_20200103_030000.sql.gz.gpg"
+    local l1 l2 l3
+    l1=$(ls_la_line "testprosjekt_20200101_030000.sql.gz.gpg")
+    l2=$(ls_la_line "testprosjekt_20200102_030000.sql.gz.gpg")
+    l3=$(ls_la_line "testprosjekt_20200103_030000.sql.gz.gpg")
+    export STUB_SFTP_LS_OUTPUT="${l1}"$'\n'"${l2}"$'\n'"${l3}"
 
     load_backup_lib
     run cleanup_hetzner
 
     local call_count
-    call_count=$(wc -l < "$STUB_SSH_CALL_LOG")
+    call_count=$(sftp_process_count)
     [[ "$call_count" -le 2 ]]
 }
 
-@test "cleanup_hetzner gjør ingen rm-kall hvis ingen filer er eldre enn cutoff" {
+@test "cleanup_hetzner gjoor ingen rm-kall hvis ingen filer er eldre enn cutoff" {
     # Filer fra fremtiden er garantert nyere enn cutoff
     local future_date
     future_date=$(date -d "+365 days" +%Y%m%d 2>/dev/null || date -v+365d +%Y%m%d 2>/dev/null || echo "20991231")
-    export STUB_SSH_LS_OUTPUT="testprosjekt_${future_date}_030000.sql.gz.gpg"
+    export STUB_SFTP_LS_OUTPUT="$(ls_la_line "testprosjekt_${future_date}_030000.sql.gz.gpg")"
 
     load_backup_lib
     run cleanup_hetzner
 
-    # Kun ls-kallet forventes — ingen rm
-    ! grep -q ' rm ' "$STUB_SSH_CALL_LOG" 2>/dev/null
+    # Kun ls-la-kallet forventes — ingen rm
+    ! grep -q '^CMD: rm ' "$STUB_SFTP_CALL_LOG" 2>/dev/null
 }
 
-@test "cleanup_hetzner gjør ingen SSH-kall når Hetzner ikke er konfigurert" {
+@test "cleanup_hetzner gjoor ingen SFTP-kall naaar Hetzner ikke er konfigurert" {
     unset HETZNER_HOST
 
     load_backup_lib
     run cleanup_hetzner
 
     local call_count
-    call_count=$(wc -l < "$STUB_SSH_CALL_LOG")
+    call_count=$(sftp_process_count)
     [[ "$call_count" -eq 0 ]]
 }
 
 @test "cleanup_hetzner avviser filnavn med spesialtegn og logger advarsel" {
-    export STUB_SSH_LS_OUTPUT="testprosjekt_20200101_030000.sql.gz.gpg
-testprosjekt_20200102_030000.sql.gz.gpg;rm -rf /
-testprosjekt_20200103_030000.sql.gz.gpg"
+    # Filnavn med semikolon (injeksjonsforsøk) skal avvises.
+    # Bruker variabel for å unngå at semikolon tolkes av shell i command substitution.
+    local malicious="testprosjekt_20200102_030000.sql.gz.gpg;malicious"
+    local l1 l2 l3
+    l1=$(ls_la_line "testprosjekt_20200101_030000.sql.gz.gpg")
+    l2="-rw-r--r--    1 u12345  u12345      12345 Jan  2 2020 ${malicious}"
+    l3=$(ls_la_line "testprosjekt_20200103_030000.sql.gz.gpg")
+    export STUB_SFTP_LS_OUTPUT="${l1}"$'\n'"${l2}"$'\n'"${l3}"
 
     load_backup_lib
     run cleanup_hetzner
 
     # Filen med semikolon skal ikke være med i rm-kommandoen
-    ! grep -q 'rm.*rm -rf' "$STUB_SSH_CALL_LOG" 2>/dev/null
+    ! grep -q 'malicious' "$STUB_SFTP_CALL_LOG" 2>/dev/null
     # Advarsel skal være logget
     echo "$output" | grep -q "ADVARSEL"
 }
 
-@test "cleanup_hetzner logger advarsel naar SSH rm-kommando feiler" {
-    export STUB_SSH_LS_OUTPUT="testprosjekt_20200101_030000.sql.gz.gpg"
-    export STUB_SSH_RM_FAIL=1
+@test "cleanup_hetzner logger advarsel naaar SFTP rm-kommando feiler" {
+    export STUB_SFTP_LS_OUTPUT="$(ls_la_line "testprosjekt_20200101_030000.sql.gz.gpg")"
+    export STUB_SFTP_RM_FAIL=1
 
     load_backup_lib
     run cleanup_hetzner
@@ -102,17 +119,19 @@ testprosjekt_20200103_030000.sql.gz.gpg"
 }
 
 @test "cleanup_hetzner behandler gyldige filnavn normalt" {
-    export STUB_SSH_LS_OUTPUT="testprosjekt_20200101_030000.sql.gz.gpg
-testprosjekt_20200102_030000.sql.gz.gpg"
+    local l1 l2
+    l1=$(ls_la_line "testprosjekt_20200101_030000.sql.gz.gpg")
+    l2=$(ls_la_line "testprosjekt_20200102_030000.sql.gz.gpg")
+    export STUB_SFTP_LS_OUTPUT="${l1}"$'\n'"${l2}"
 
     load_backup_lib
     run cleanup_hetzner
 
     # Begge filer skal markeres for sletting (rm-kall skal forekomme)
-    grep -q ' rm ' "$STUB_SSH_CALL_LOG" 2>/dev/null
+    grep -q '^CMD: rm ' "$STUB_SFTP_CALL_LOG" 2>/dev/null
 }
 
-@test "cleanup_hetzner returnerer feil og logger advarsel naar dato-cutoff-kalkulasjon feiler" {
+@test "cleanup_hetzner returnerer feil og logger advarsel naaar dato-cutoff-kalkulasjon feiler" {
     export STUB_DATE_FAIL=1
 
     load_backup_lib
@@ -125,10 +144,10 @@ testprosjekt_20200102_030000.sql.gz.gpg"
 @test "cleanup_hetzner sletter gammel fil — dato-ekstraksjon med POSIX sed (BusyBox-kompatibel)" {
     # grep -oP (Perl-regex) støttes ikke i BusyBox grep (postgres:16-alpine).
     # Verifiserer at dato-ekstraksjon fungerer og at filen inkluderes i rm-kommandoen.
-    export STUB_SSH_LS_OUTPUT="testprosjekt_20200101_030000.sql.gz.gpg"
+    export STUB_SFTP_LS_OUTPUT="$(ls_la_line "testprosjekt_20200101_030000.sql.gz.gpg")"
 
     load_backup_lib
     run cleanup_hetzner
 
-    grep -q 'testprosjekt_20200101_030000.sql.gz.gpg' "$STUB_SSH_CALL_LOG"
+    grep -q 'testprosjekt_20200101_030000.sql.gz.gpg' "$STUB_SFTP_CALL_LOG"
 }

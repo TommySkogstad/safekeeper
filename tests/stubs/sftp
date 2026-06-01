@@ -1,0 +1,67 @@
+#!/bin/bash
+# Stub for sftp i batch-modus (-b -).
+# Leser SFTP-kommandoer fra stdin og simulerer respons.
+#
+# Støttede env-variabler:
+#   STUB_SFTP_FAIL=1          - tilkoblingsfeil (exit 1 umiddelbart)
+#   STUB_SFTP_MKDIR_FAIL=1    - mkdir-kommandoer feiler (uten - prefix → exit 1)
+#   STUB_SFTP_LS_OUTPUT       - rå ls-la-formatert output for ls-la-kommandoer
+#   STUB_SFTP_LS_SIZE         - filstørrelse som returneres for ls-la-enkeltfil (default: 7)
+#   STUB_SFTP_LS_EMPTY=1      - ls -la returnerer ingen output (verifisering feiler)
+#   STUB_SFTP_WRONG_SIZE=1    - returnerer feil størrelse (for å simulere størrelsesmismatch)
+#   STUB_SFTP_RM_FAIL=1       - rm-kommandoer feiler (exit 1)
+#   STUB_SFTP_CALL_LOG        - fil for å logge sftp-prosess-kall (én linje per prosess-invokasjon)
+
+[[ "${STUB_SFTP_FAIL:-0}" == "1" ]] && exit 1
+
+if [[ -n "${STUB_SFTP_CALL_LOG:-}" ]]; then
+    echo "$*" >> "$STUB_SFTP_CALL_LOG"
+fi
+
+# Les batch-kommandoer fra stdin
+while IFS= read -r cmd; do
+    [[ -z "$cmd" ]] && continue
+
+    # Strip evt. ledende '-' (non-fatal prefix)
+    bare_cmd="${cmd#-}"
+
+    if [[ -n "${STUB_SFTP_CALL_LOG:-}" ]]; then
+        echo "CMD: ${bare_cmd}" >> "$STUB_SFTP_CALL_LOG"
+    fi
+
+    case "${bare_cmd%% *}" in
+        mkdir)
+            if [[ "${STUB_SFTP_MKDIR_FAIL:-0}" == "1" ]] && [[ "$cmd" != "-"* ]]; then
+                exit 1
+            fi
+            ;;
+        ls)
+            if [[ "$bare_cmd" == "ls -la "* ]]; then
+                # ls -la for upload-verifisering eller cleanup-listing
+                if [[ "${STUB_SFTP_LS_EMPTY:-0}" == "1" ]]; then
+                    : # returner ingenting — remote_size blir tom → "Kunne ikke bekrefte"
+                elif [[ -n "${STUB_SFTP_LS_OUTPUT:-}" ]]; then
+                    echo "${STUB_SFTP_LS_OUTPUT}"
+                else
+                    local_file="${bare_cmd#ls -la }"
+                    filename="${local_file##*/}"
+                    if [[ "${STUB_SFTP_WRONG_SIZE:-0}" == "1" ]]; then
+                        size=999999
+                    else
+                        size="${STUB_SFTP_LS_SIZE:-7}"
+                    fi
+                    echo "-rw-r--r--    1 u12345  u12345       ${size} Jun  1 03:00 ${filename}"
+                fi
+            elif [[ "$bare_cmd" == "ls "* ]]; then
+                [[ -n "${STUB_SFTP_LS_OUTPUT:-}" ]] && echo "${STUB_SFTP_LS_OUTPUT}"
+            fi
+            ;;
+        rm)
+            if [[ "${STUB_SFTP_RM_FAIL:-0}" == "1" ]]; then
+                exit 1
+            fi
+            ;;
+    esac
+done
+
+exit 0
