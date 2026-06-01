@@ -163,8 +163,12 @@ cleanup_hetzner() {
     fi
 
     log "Rydder gamle backups pa Hetzner StorageBox..."
-    local cutoff_ts
-    cutoff_ts=$(date -d "-${BACKUP_RETENTION_DAYS} days" +%Y%m%d 2>/dev/null || date -v-"${BACKUP_RETENTION_DAYS}"d +%Y%m%d 2>/dev/null || echo "")
+    local cutoff_ts cutoff_epoch
+    # BusyBox (Alpine) date stotter verken GNU "-d '-N days'" eller BSD "-v-Nd".
+    # Beregn cutoff via epoke-aritmetikk og formater med "-d @EPOCH" (virker pa
+    # bade BusyBox og GNU); BSD "-r" som fallback.
+    cutoff_epoch=$(( $(date +%s) - BACKUP_RETENTION_DAYS * 86400 ))
+    cutoff_ts=$(date -d "@${cutoff_epoch}" +%Y%m%d 2>/dev/null || date -r "${cutoff_epoch}" +%Y%m%d 2>/dev/null || echo "")
     [[ -z "$cutoff_ts" ]] && { log "ADVARSEL: Klarte ikke beregne dato-cutoff for Hetzner cleanup — sjekk BACKUP_RETENTION_DAYS='${BACKUP_RETENTION_DAYS}'"; return 1; }
 
     local files_to_delete=()
@@ -254,8 +258,9 @@ run_backup() {
     # Slett lokale backups eldre enn BACKUP_RETENTION_DAYS
     cleanup_local "sql.gz"
 
-    # Slett gamle backups pa Hetzner
-    cleanup_hetzner
+    # Slett gamle backups pa Hetzner (best-effort — opprydding ma ALDRI avbryte
+    # backup-flyten eller hindre at cron-daemonen starter via set -e)
+    cleanup_hetzner || log "ADVARSEL: Hetzner-opprydding feilet — fortsetter (lokal backup er intakt)"
 
     log "Backup fullfort OK"
 }
