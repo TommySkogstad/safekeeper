@@ -21,7 +21,7 @@ setup() {
     export HETZNER_HOST=hetzner.example
     export HETZNER_USER=u12345
 
-    unset STUB_SCP_FAIL STUB_SSH_FAIL
+    unset STUB_SCP_FAIL STUB_SSH_FAIL STUB_SFTP_FAIL STUB_SFTP_WRONG_SIZE STUB_SFTP_LS_SIZE
 }
 
 teardown() {
@@ -62,8 +62,8 @@ load_backup_lib() {
     [[ "$output" == *"Hetzner-opplasting feilet etter 3 forsok"* ]]
 }
 
-@test "upload_with_retry prover pa nytt ved checksum-mismatch etter opplasting" {
-    export STUB_SSH_WRONG_CHECKSUM=1
+@test "upload_with_retry prover pa nytt ved stoerrelses-mismatch etter opplasting" {
+    export STUB_SFTP_WRONG_SIZE=1
     export BACKUP_RETRY_MAX=3
     load_backup_lib
 
@@ -71,12 +71,14 @@ load_backup_lib() {
     echo "content" > "$dummy"
 
     run upload_with_retry "$dummy"
-    [[ "$output" == *"Checksum-mismatch"* ]]
+    [[ "$output" == *"Størrelsesmismatch"* ]]
     [[ "$output" == *"forsok 1/3"* ]]
     [[ "$output" == *"forsok 2/3"* ]]
 }
 
-@test "upload_to_hetzner logger advarsel og returnerer 1 ved tom sha256sum-respons" {
+@test "upload_to_hetzner logger advarsel og returnerer 1 naar SFTP ls -la ikke returnerer filinfo" {
+    # STUB_SFTP_LS_EMPTY=1: ls -la returnerer ingenting → remote_size="" → "Kunne ikke bekrefte"
+    export STUB_SFTP_LS_EMPTY=1
     load_backup_lib
 
     local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
@@ -84,11 +86,11 @@ load_backup_lib() {
 
     run upload_to_hetzner "$dummy"
     [ "$status" -eq 1 ]
-    [[ "$output" == *"Kunne ikke verifisere checksum"* ]]
+    [[ "$output" == *"Kunne ikke bekrefte"* ]]
 }
 
-@test "upload_to_hetzner returnerer 1 og logger katalog-feil naar mkdir og test-d begge feiler paa Hetzner" {
-    export STUB_SSH_FAIL=1
+@test "upload_to_hetzner returnerer 1 og logger katalog-feil naar SFTP-tilkobling feiler" {
+    export STUB_SFTP_FAIL=1
     load_backup_lib
 
     local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
@@ -126,8 +128,8 @@ load_backup_lib() {
     [[ "$output" != *"forsok 2/2"* ]]
 }
 
-@test "upload_to_hetzner returnerer 1 og logger katalog-feil ved SSH permission denied (STUB_SSH_EXIT=permission_denied)" {
-    export STUB_SSH_EXIT=permission_denied
+@test "upload_to_hetzner returnerer 1 og logger katalog-feil ved SFTP-tilkoblingsfeil" {
+    export STUB_SFTP_FAIL=1
     load_backup_lib
 
     local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
@@ -138,14 +140,19 @@ load_backup_lib() {
     [[ "$output" == *"katalog"* ]]
 }
 
-@test "upload_to_hetzner returnerer 1 og logger katalog-feil ved SSH timeout (STUB_SSH_EXIT=timeout, exit 255)" {
-    export STUB_SSH_EXIT=timeout
+@test "upload_to_hetzner lykkes i SFTP-only-modus (ssh feiler, sftp fungerer)" {
+    # Simuler StorageBox i SFTP-only-modus: ssh er utilgjengelig, sftp virker.
+    # Med gammel kode (ssh mkdir/test-d) feiler upload_to_hetzner.
+    # Med ny kode (sftp -mkdir/ls) skal upload lykkes.
+    export STUB_SSH_FAIL=1
+    export STUB_SFTP_FAIL=0
     load_backup_lib
 
     local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
-    echo "content" > "$dummy"
+    printf 'content' > "$dummy"
+    export STUB_SFTP_LS_SIZE=7
 
     run upload_to_hetzner "$dummy"
-    [ "$status" -eq 1 ]
-    [[ "$output" == *"katalog"* ]]
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"lastet opp og verifisert"* ]]
 }

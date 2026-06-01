@@ -113,10 +113,10 @@ load_backup_lib() {
     [[ "$output" == *"forsok"* ]]
 }
 
-@test "run_backup logger ADVARSEL og katalog-feil ved SSH permission denied paa Hetzner mkdir (lokal backup ok)" {
+@test "run_backup logger ADVARSEL og katalog-feil ved SFTP-tilkoblingsfeil paa Hetzner mkdir (lokal backup ok)" {
     export HETZNER_HOST=hetzner.example
     export HETZNER_USER=u12345
-    export STUB_SSH_EXIT=permission_denied
+    export STUB_SFTP_FAIL=1
     export BACKUP_RETRY_MAX=1
     load_backup_lib
 
