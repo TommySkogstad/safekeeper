@@ -113,7 +113,10 @@ load_backup_lib() {
     [[ "$output" == *"forsok"* ]]
 }
 
-@test "run_backup logger ADVARSEL og katalog-feil ved SFTP-tilkoblingsfeil paa Hetzner mkdir (lokal backup ok)" {
+@test "run_backup lykkes med SSH-fallback og logger ADVARSEL naar SFTP feiler men SSH virker (lokal backup ok)" {
+    # SFTP-subsystem utilgjengelig (STUB_SFTP_FAIL=1), men SSH shell-kommandoer virker.
+    # SSH mkdir fallback oppretter katalog; SFTP-verifisering feiler; SSH sha256sum er tom.
+    # Lokal backup er OK, opplasting til Hetzner anses som vellykket (SCP exit 0).
     export HETZNER_HOST=hetzner.example
     export HETZNER_USER=u12345
     export STUB_SFTP_FAIL=1
@@ -123,7 +126,8 @@ load_backup_lib() {
     run run_backup
     [ "$status" -eq 0 ]
     [[ "$output" == *"ADVARSEL"* ]]
-    [[ "$output" == *"katalog"* ]]
+    # Med SSH-fallback: SSH mkdir virker stille; verifiseringen logger "Kunne ikke bekrefte"
+    [[ "$output" == *"Kunne ikke bekrefte"* ]]
 
     local files
     files=$(find "$BACKUP_DIR" -maxdepth 1 -name "testprosjekt_*.sql.gz.gpg" | wc -l)
