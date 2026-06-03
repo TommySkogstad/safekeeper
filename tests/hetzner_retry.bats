@@ -76,21 +76,24 @@ load_backup_lib() {
     [[ "$output" == *"forsok 2/3"* ]]
 }
 
-@test "upload_to_hetzner logger advarsel og returnerer 1 naar SFTP ls -la ikke returnerer filinfo" {
-    # STUB_SFTP_LS_EMPTY=1: ls -la returnerer ingenting → remote_size="" → "Kunne ikke bekrefte"
+@test "upload_to_hetzner logger advarsel men lykkes naar SFTP ls-la er tom og SSH sha256sum ogsaa er tom" {
+    # SFTP ls -la returnerer ingenting → SSH sha256sum fallback → ssh stub returnerer 0 med tom output
+    # Resultat: advarsel-logging, men status 0 (stoler paa SCP exit 0)
     export STUB_SFTP_LS_EMPTY=1
     load_backup_lib
 
     local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
-    echo "content" > "$dummy"
+    printf 'content' > "$dummy"
 
     run upload_to_hetzner "$dummy"
-    [ "$status" -eq 1 ]
+    [ "$status" -eq 0 ]
     [[ "$output" == *"Kunne ikke bekrefte"* ]]
 }
 
-@test "upload_to_hetzner returnerer 1 og logger katalog-feil naar SFTP-tilkobling feiler" {
+@test "upload_to_hetzner returnerer 1 og logger katalog-feil naar baade SFTP og SSH feiler" {
+    # Bade SFTP og SSH maa feile for at katalog-oppretting skal returnere 1
     export STUB_SFTP_FAIL=1
+    export STUB_SSH_FAIL=1
     load_backup_lib
 
     local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
@@ -128,8 +131,9 @@ load_backup_lib() {
     [[ "$output" != *"forsok 2/2"* ]]
 }
 
-@test "upload_to_hetzner returnerer 1 og logger katalog-feil ved SFTP-tilkoblingsfeil" {
+@test "upload_to_hetzner returnerer 1 og logger katalog-feil naar baade SFTP og SSH feiler (2)" {
     export STUB_SFTP_FAIL=1
+    export STUB_SSH_FAIL=1
     load_backup_lib
 
     local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
@@ -138,6 +142,24 @@ load_backup_lib() {
     run upload_to_hetzner "$dummy"
     [ "$status" -eq 1 ]
     [[ "$output" == *"katalog"* ]]
+}
+
+@test "upload_to_hetzner lykkes med SSH-fallback naar SFTP-subsystem er utilgjengelig men SSH shell virker" {
+    # Simuler StorageBox der SFTP-subsystem feiler (f.eks. u571604 der SFTP er utilgjengelig)
+    # men SSH shell-kommandoer (mkdir/test-d) fungerer.
+    # Skal lykkes selv om hverken SFTP mkdir eller SFTP ls-la-verifisering virker.
+    export STUB_SFTP_FAIL=1
+    export STUB_SSH_FAIL=0
+    load_backup_lib
+
+    local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
+    printf 'content' > "$dummy"
+
+    run upload_to_hetzner "$dummy"
+    [ "$status" -eq 0 ]
+    # Forventer enten "lastet opp og verifisert" (SSH sha256sum fungerte) eller
+    # "Kunne ikke bekrefte" med SCP exit 0 (begge verifiseringsveier feiler, men OK)
+    [[ "$output" != *"SFTP og SSH feilet"* ]] || [[ "$output" == *"Kunne ikke bekrefte"* ]]
 }
 
 @test "upload_to_hetzner lykkes i SFTP-only-modus (ssh feiler, sftp fungerer)" {
