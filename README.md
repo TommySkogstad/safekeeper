@@ -38,6 +38,7 @@ Alt styres via miljovariabler - ingen prosjektspesifikk kode.
 | `BACKUP_SCHEDULE` | Cron-uttrykk (valideres ved oppstart — må ha 5 felt) | `0 5 * * *` | Nei |
 | `BACKUP_RETENTION_DAYS` | Dager a beholde backups | `30` | Nei |
 | `BACKUP_ENCRYPTION_KEY` | GPG-krypteringsnokkel (AES256) | - | Ja |
+| `DB_WAIT_TIMEOUT` | Maks ventetid (sekunder) på PostgreSQL ved oppstart | `60` | Nei |
 | `BACKUP_RETRY_MAX` | Maks antall Hetzner-opplastingsforsøk | `3` | Nei |
 | `BACKUP_RETRY_DELAY` | Startverdien (sekunder) for eksponentiell backoff ved retry | `5` | Nei |
 | `FILES_DIR` | Katalog for fil-backup | (tom = deaktivert) | Nei |
