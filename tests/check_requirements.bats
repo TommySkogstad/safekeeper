@@ -197,8 +197,11 @@ teardown() {
     [[ "$output" != *"BACKUP_HEALTHCHECK_WINDOW"* ]]
 }
 
-@test "pg_dump --version returnerer PG16 major-versjon (versjonsdrift-vakt)" {
+@test "pg_dump stub-versjon er synkronisert med Dockerfile baseimage (versjonsdrift-vakt)" {
+    dockerfile_major=$(grep '^FROM postgres:' "$SAFEKEEPER_ROOT/Dockerfile" \
+        | sed 's/FROM postgres:\([0-9]*\)\..*/\1/')
+    [ -n "$dockerfile_major" ]
     run pg_dump --version
     [ "$status" -eq 0 ]
-    [[ "$output" =~ [[:space:]]16\. ]]
+    [[ "$output" =~ [[:space:]]${dockerfile_major}[.] ]]
 }
