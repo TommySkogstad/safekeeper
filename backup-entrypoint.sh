@@ -30,6 +30,7 @@ BACKUP_RETRY_DELAY="${BACKUP_RETRY_DELAY:-5}"
 # Interne fil-stier (kan overstyres i tester via env-variabler)
 SAFEKEEPER_ENV_FILE="${SAFEKEEPER_ENV_FILE:-/etc/safekeeper.env}"
 CRONTAB_FILE="${CRONTAB_FILE:-/etc/crontabs/root}"
+BACKUP_LOCK_FILE="${BACKUP_LOCK_FILE:-/tmp/safekeeper-${PROJECT_NAME}.lock}"
 
 # Fil-backup (valgfritt)
 FILES_DIR="${FILES_DIR:-}"
@@ -354,6 +355,12 @@ main() {
     check_requirements
     setup_pgpass
     mkdir -p "$BACKUP_DIR"
+
+    exec {LOCK_FD}>"$BACKUP_LOCK_FILE"
+    if ! flock -xn "$LOCK_FD"; then
+        log "ADVARSEL: En backup kjores allerede (${BACKUP_LOCK_FILE}) — avslutter"
+        exit 0
+    fi
 
     if [[ "${1:-}" == "backup" ]]; then
         run_backup
