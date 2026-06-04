@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 #
 # Tester for upload_with_retry i backup-entrypoint.sh.
-# Verifiserer at opplasting forsoeker 3 ganger ved vedvarende scp-feil
+# Verifiserer at opplasting forsoeker 3 ganger ved vedvarende feil
 # og logger korrekt feilmelding naar alle forsoek slar feil.
 #
 # backup-entrypoint.sh sources som bibliotek (main-kallet strippes bort)
@@ -21,7 +21,7 @@ setup() {
     export HETZNER_HOST=hetzner.example
     export HETZNER_USER=u12345
 
-    unset STUB_SCP_FAIL STUB_SSH_FAIL STUB_SFTP_FAIL STUB_SFTP_WRONG_SIZE STUB_SFTP_LS_SIZE
+    unset STUB_SCP_FAIL STUB_SSH_FAIL STUB_SFTP_FAIL STUB_SFTP_WRONG_SIZE STUB_SFTP_LS_SIZE STUB_SFTP_PUT_FAIL
 }
 
 teardown() {
@@ -37,8 +37,8 @@ load_backup_lib() {
     echo "dummy-ssh-key" > "$SSH_KEY"
 }
 
-@test "upload_with_retry prover 3 ganger ved vedvarende scp-feil" {
-    export STUB_SCP_FAIL=1
+@test "upload_with_retry prover 3 ganger ved vedvarende sftp-feil" {
+    export STUB_SFTP_PUT_FAIL=1
     export BACKUP_RETRY_MAX=3
     load_backup_lib
 
@@ -51,7 +51,7 @@ load_backup_lib() {
 }
 
 @test "upload_with_retry logger 'etter 3 forsok' ved total feil" {
-    export STUB_SCP_FAIL=1
+    export STUB_SFTP_PUT_FAIL=1
     export BACKUP_RETRY_MAX=3
     load_backup_lib
 
@@ -105,7 +105,7 @@ load_backup_lib() {
 }
 
 @test "upload_with_retry respekterer BACKUP_RETRY_MAX=1 (ingen gjenforsok)" {
-    export STUB_SCP_FAIL=1
+    export STUB_SFTP_PUT_FAIL=1
     export BACKUP_RETRY_MAX=1
     load_backup_lib
 
@@ -118,7 +118,7 @@ load_backup_lib() {
 }
 
 @test "upload_with_retry respekterer BACKUP_RETRY_MAX=2 (ett gjenforsok)" {
-    export STUB_SCP_FAIL=1
+    export STUB_SFTP_PUT_FAIL=1
     export BACKUP_RETRY_MAX=2
     load_backup_lib
 
@@ -144,10 +144,9 @@ load_backup_lib() {
     [[ "$output" == *"katalog"* ]]
 }
 
-@test "upload_to_hetzner lykkes med SSH-fallback naar SFTP-subsystem er utilgjengelig men SSH shell virker" {
-    # Simuler StorageBox der SFTP-subsystem feiler (f.eks. u571604 der SFTP er utilgjengelig)
-    # men SSH shell-kommandoer (mkdir/test-d) fungerer.
-    # Skal lykkes selv om hverken SFTP mkdir eller SFTP ls-la-verifisering virker.
+@test "upload_to_hetzner feiler naar SFTP-subsystem er utilgjengelig (ingen SSH-fallback for opplasting)" {
+    # StorageBox der SFTP er utilgjengelig (f.eks. u571604): mkdir bruker SSH-fallback,
+    # men selve opplastingen (sftp put) feiler — ingen scp-fallback etter refaktorering.
     export STUB_SFTP_FAIL=1
     export STUB_SSH_FAIL=0
     load_backup_lib
@@ -156,10 +155,8 @@ load_backup_lib() {
     printf 'content' > "$dummy"
 
     run upload_to_hetzner "$dummy"
-    [ "$status" -eq 0 ]
-    # Forventer enten "lastet opp og verifisert" (SSH sha256sum fungerte) eller
-    # "Kunne ikke bekrefte" med SCP exit 0 (begge verifiseringsveier feiler, men OK)
-    [[ "$output" != *"SFTP og SSH feilet"* ]] || [[ "$output" == *"Kunne ikke bekrefte"* ]]
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"ADVARSEL"* ]]
 }
 
 @test "upload_to_hetzner lykkes i SFTP-only-modus (ssh feiler, sftp fungerer)" {
@@ -177,4 +174,47 @@ load_backup_lib() {
     run upload_to_hetzner "$dummy"
     [ "$status" -eq 0 ]
     [[ "$output" == *"lastet opp og verifisert"* ]]
+}
+
+@test "upload_to_hetzner lykkes i ren SFTP-only-modus uten scp i PATH" {
+    # Verifiserer at opplasting lykkes selv om scp feiler — etter fiks skal
+    # sftp put brukes for opplasting, ikke scp.
+    export STUB_SCP_FAIL=1
+    export STUB_SSH_FAIL=1
+    export STUB_SFTP_FAIL=0
+    export STUB_SFTP_LS_SIZE=7
+    load_backup_lib
+
+    local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
+    printf 'content' > "$dummy"
+
+    run upload_to_hetzner "$dummy"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"lastet opp og verifisert"* ]]
+}
+
+@test "upload_with_retry prover 3 ganger ved vedvarende sftp put-feil" {
+    export STUB_SFTP_PUT_FAIL=1
+    export BACKUP_RETRY_MAX=3
+    load_backup_lib
+
+    local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
+    echo "content" > "$dummy"
+
+    run upload_with_retry "$dummy"
+    [[ "$output" == *"forsok 1/3"* ]]
+    [[ "$output" == *"forsok 2/3"* ]]
+}
+
+@test "upload_with_retry respekterer BACKUP_RETRY_MAX=1 med sftp put-feil (ingen gjenforsok)" {
+    export STUB_SFTP_PUT_FAIL=1
+    export BACKUP_RETRY_MAX=1
+    load_backup_lib
+
+    local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
+    echo "content" > "$dummy"
+
+    run upload_with_retry "$dummy"
+    [[ "$output" == *"feilet etter 1 forsok"* ]]
+    [[ "$output" != *"Prover igjen"* ]]
 }
