@@ -1,4 +1,4 @@
-FROM postgres:16.14-alpine@sha256:16bc17c64a573ef34162af9298258d1aec548232985b33ed7b1eac33ba35c229
+FROM postgres:17.10-alpine@sha256:979c4379dd698aba0b890599a6104e082035f98ef31d9b9291ec22f2b13059ca
 
 RUN apk add --no-cache \
     bash \

@@ -27,7 +27,7 @@ Docker Compose (per app)
             +-- cleanup (retention lokalt + Hetzner)
 ```
 
-**Baseimage:** `postgres:16.14-alpine@sha256:16bc17c64a573ef34162af9298258d1aec548232985b33ed7b1eac33ba35c229` (gir tilgang til `pg_dump`, `pg_isready`, `psql`)
+**Baseimage:** `postgres:17.10-alpine@sha256:979c4379dd698aba0b890599a6104e082035f98ef31d9b9291ec22f2b13059ca` (gir tilgang til `pg_dump`, `pg_isready`, `psql`)
 
 **Ekstra pakker:** bash, gzip, gnupg, openssh-client, tzdata
 
@@ -39,7 +39,7 @@ Docker Compose (per app)
 |-----|-------------|
 | `backup-entrypoint.sh` | Hovedskript - backup, kryptering, opplasting, opprydding, cron |
 | `restore.sh` | Gjenoppretting fra lokal backup-fil |
-| `Dockerfile` | Docker-image basert pa postgres:16.14-alpine (pinnet til digest) |
+| `Dockerfile` | Docker-image basert pa postgres:17.10-alpine (pinnet til digest) |
 
 ### Backup-flyt
 
@@ -130,7 +130,7 @@ Sensitive filer ryddes opp via `trap EXIT`:
 - `StrictHostKeyChecking=accept-new` (TOFU-modell - aksepterer nye nokler, avviser endrede)
 - `BatchMode=yes` (ingen interaktive prompts)
 - Port 23 (Hetzner StorageBox standard)
-- **Dato-ekstraksjon**: `cleanup_hetzner` bruker POSIX sed (ikke `grep -oP`), siden BusyBox grep i postgres:16.14-alpine ikke støtter Perl-regex
+- **Dato-ekstraksjon**: `cleanup_hetzner` bruker POSIX sed (ikke `grep -oP`), siden BusyBox grep i postgres:17.10-alpine ikke støtter Perl-regex
 - **Merk**: SSH brukes IKKE for directory-creation — StorageBox restricted shell avviser shell-kommandoer med "Command not found"
 
 ### Filpermisjon
