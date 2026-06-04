@@ -33,6 +33,7 @@ tests/
     psql                     # Stub som konsumerer stdin (for restore-tester)
     scp                      # Stub med STUB_SCP_FAIL for Hetzner-retry-tester
     ssh                      # Stub med STUB_SSH_FAIL, returnerer tom stdout
+    wget                     # Stub for ntfy-varsling (logger kall til WGET_CALL_LOG)
     sleep                    # Stub som returnerer umiddelbart
   backup_files.bats          # Tester for backup_files() happy-path (.tar.gz.gpg, .sha256, chmod 600)
   check_requirements.bats    # Tester for manglende miljøvariabler
@@ -40,6 +41,7 @@ tests/
   encryption.bats            # Tester for GPG AES256-kryptering (round-trip)
   hetzner_cleanup.bats       # Tester for cleanup_hetzner (batching, ingen N+1 SSH, filnavn-validering)
   hetzner_retry.bats         # Tester for upload_with_retry (3 forsøk, feilmelding)
+  ntfy.bats                  # Tester for proaktiv ntfy-varsling ved backup-feil
   restore.bats               # Tester for restore.sh (checksum, krav om nøkkel, psql-feil)
   retention.bats             # Tester for lokal backup-retention (sletting av gamle filer)
   run_backup.bats            # Tester for happy-path backup-flyt
@@ -53,10 +55,11 @@ Stub-binærene i `tests/stubs/` prependes til `PATH` via `setup_stubs()` i `help
 |----------|--------|
 | `STUB_GPG_FAIL=1` | `gpg` returnerer 1 |
 | `STUB_PGDUMP_FAIL=1` | `pg_dump` returnerer 1 |
-| `STUB_PGISREADY_FAIL=1` | `pg_isready` returnerer 1 |
+| `STUB_PGISREADY_FAIL=always` | `pg_isready` returnerer 1 (brukt i ntfy-tester) |
 | `STUB_SCP_FAIL=1` | `scp` returnerer 1 (brukt i Hetzner-retry-tester) |
 | `STUB_SSH_FAIL=1` | `ssh` returnerer 1 |
 | `STUB_PSQL_FAIL=1` | `psql` returnerer 1 |
+| `WGET_CALL_LOG` | `wget` stub logger alle kall til denne fila (brukt i ntfy-tester) |
 
 For testisolasjon kan `BACKUP_SUCCESS_FILE` settes til en mktemp-sti i stedet for den hardkodede `/tmp/last-backup-success`.
 

@@ -47,6 +47,7 @@ Alt styres via miljovariabler - ingen prosjektspesifikk kode.
 | `HETZNER_USER` | Hetzner StorageBox brukernavn | (tom) | Nei |
 | `HETZNER_PORT` | Hetzner SSH-port | `23` | Nei |
 | `HETZNER_BACKUP_PATH` | Sti pa StorageBox | `backups/${PROJECT_NAME}` | Nei |
+| `NTFY_URL` | ntfy.sh-URL for proaktiv varsling ved backup-feil | (tom = deaktivert) | Nei |
 
 ## Bruk i docker-compose
 
@@ -79,6 +80,7 @@ backup:
     HETZNER_USER: ${HETZNER_USER:-}
     HETZNER_PORT: ${HETZNER_PORT:-23}
     HETZNER_BACKUP_PATH: ${HETZNER_BACKUP_PATH:-backups/mittprosjekt}
+    NTFY_URL: ${NTFY_URL:-}
   volumes:
     - /mnt/nas-apps/mittprosjekt/backups:/backups
     - /home/bruker/.ssh/id_ed25519:/root/.ssh/id_ed25519:ro
@@ -145,6 +147,25 @@ docker compose -f docker-compose.tunnel.yml exec backup restore.sh /backups/mitt
 ```
 
 Restore verifiserer SHA256-checksum automatisk hvis `.sha256`-fil finnes.
+
+## Proaktiv varsling (ntfy)
+
+Når `NTFY_URL` er konfigurert, sender safekeeper en ntfy-varsling umiddelbart ved backup-feil:
+
+```bash
+# I .env eller docker-compose environment:
+NTFY_URL=https://ntfy.sh/mittprosjekt-backups
+# eller lokalt:
+NTFY_URL=http://ntfy.tommytv.no/mittprosjekt-backups
+```
+
+Varslingen inneholder:
+- Feilmelding fra backup-prosessen
+- Projekt-navn (`PROJECT_NAME`)
+- `Priority: urgent` — sikrer at varsling oppfattes som høyt prioritert
+- `Tags: rotating_light` — rødt lys emoji for synlighet
+
+Hvis `NTFY_URL` er tom eller ikke satt, sendes ingen varsling. Dette moegner operatoerer til a reagere raskt ved backup-problemer i stedet for a stole pa manuelle sjekker eller healthcheck-timeouts.
 
 ## Kryptering
 

@@ -54,6 +54,7 @@ Docker Compose (per app)
 9. Opprydding av gamle backups (lokalt + Hetzner)
 10. Eventuell fil-backup (hvis `FILES_DIR` er satt) — samme operasjoner som ovenfor
 11. Skriv `/tmp/last-backup-success` med timestamp (kun hvis BÅDE database-backup OG fil-backup er vellykkede)
+12. Ved backup-feil: send proaktiv ntfy-varsling (hvis `NTFY_URL` er satt)
 
 ### Fil-backup (valgfritt)
 
@@ -103,6 +104,7 @@ openssl rand -base64 32
 | `HETZNER_USER` | Hetzner StorageBox brukernavn | (tom) | Nei |
 | `HETZNER_PORT` | Hetzner SSH-port | `23` | Nei |
 | `HETZNER_BACKUP_PATH` | Sti pa StorageBox | `backups/${PROJECT_NAME}` | Nei |
+| `NTFY_URL` | ntfy.sh-URL for proaktiv varsling ved backup-feil (tom = deaktivert) | (tom) | Nei |
 
 ## Sikkerhet
 
@@ -153,6 +155,17 @@ openssl rand -base64 32
 - Passordbehandler (Bitwarden, 1Password)
 - Fysisk notat i safe
 - Ikke kun i `.env` - den er pa samme server som backupene
+
+## Proaktiv varsling (ntfy)
+
+Når `NTFY_URL` er konfigurert, sender safekeeper en ntfy-varsling umiddelbart ved backup-feil:
+
+- **Trigger**: Backup-feil (database, fil-backup, eller offsite-opplasting)
+- **Kanal**: ntfy.sh-URL (f.eks. `http://ntfy.tommytv.no/safekeeper` eller `https://ntfy.sh/mytopic`)
+- **Innhold**: Feilmelding med projekt-navn, Priority=urgent, Tag=rotating_light (rødt lys emoji)
+- **Hvis NTFY_URL er tom**: Ingen varsling sendes
+
+Dette moegner operatoerer til a reagere raskt ved backup-problemer, i stedet for a stole pa manuelle sjekker eller healthcheck-timeouts.
 
 ## CI/CD
 
