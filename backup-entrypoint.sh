@@ -105,9 +105,8 @@ check_requirements() {
 
     if [[ -n "$HETZNER_HOST" ]]; then
         [[ "$HETZNER_HOST" =~ ^[a-zA-Z0-9.-]+$ ]] || error "HETZNER_HOST inneholder ugyldige tegn: '$HETZNER_HOST'"
-        if [[ -n "$HETZNER_USER" ]]; then
-            [[ "$HETZNER_USER" =~ ^[a-zA-Z0-9_-]+$ ]] || error "HETZNER_USER inneholder ugyldige tegn: '$HETZNER_USER'"
-        fi
+        [[ -n "$HETZNER_USER" ]] || error "HETZNER_USER er påkrevd når HETZNER_HOST er satt"
+        [[ "$HETZNER_USER" =~ ^[a-zA-Z0-9_-]+$ ]] || error "HETZNER_USER inneholder ugyldige tegn: '$HETZNER_USER'"
         [[ "$HETZNER_PORT" =~ ^[0-9]+$ ]] && [[ "$HETZNER_PORT" -ge 1 ]] && [[ "$HETZNER_PORT" -le 65535 ]] \
             || error "HETZNER_PORT er ugyldig: '$HETZNER_PORT'"
         [[ "$HETZNER_BACKUP_PATH" =~ ^[a-zA-Z0-9._/-]+$ ]] || error "HETZNER_BACKUP_PATH inneholder ugyldige tegn: '$HETZNER_BACKUP_PATH'"
