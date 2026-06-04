@@ -47,12 +47,13 @@ Docker Compose (per app)
 2. `pg_dump` med `--no-owner --no-privileges --format=plain`
 3. Komprimering med `gzip`
 4. Kryptering med `gpg --symmetric --cipher-algo AES256`
-5. Verifisering (dekrypterings-test av kryptert fil)
-6. SHA256-checksum genereres
-7. Opplasting til Hetzner StorageBox med checksum-verifisering
-8. Opprydding av gamle backups (lokalt + Hetzner)
-9. Eventuell fil-backup (hvis `FILES_DIR` er satt) — samme operasjoner som ovenfor
-10. Skriv `/tmp/last-backup-success` med timestamp (kun hvis BÅDE database-backup OG fil-backup er vellykkede)
+5. Minimumsstørrelse-validering (sikrer at backup-filen ikke er mistenkelig liten)
+6. Verifisering (dekrypterings-test av kryptert fil)
+7. SHA256-checksum genereres
+8. Opplasting til Hetzner StorageBox med checksum-verifisering
+9. Opprydding av gamle backups (lokalt + Hetzner)
+10. Eventuell fil-backup (hvis `FILES_DIR` er satt) — samme operasjoner som ovenfor
+11. Skriv `/tmp/last-backup-success` med timestamp (kun hvis BÅDE database-backup OG fil-backup er vellykkede)
 
 ### Fil-backup (valgfritt)
 
@@ -96,6 +97,7 @@ openssl rand -base64 32
 | `DB_WAIT_TIMEOUT` | Maks ventetid (sekunder) på PostgreSQL ved oppstart | `60` | Nei |
 | `BACKUP_RETRY_MAX` | Maks antall Hetzner-opplastingsforsøk | `3` | Nei |
 | `BACKUP_RETRY_DELAY` | Startverdien (sekunder) for eksponentiell backoff ved retry | `5` | Nei |
+| `MIN_BACKUP_SIZE_BYTES` | Minimumsstørrelse (bytes) for backup-fil — fanger stille tomme dumps | `1024` | Nei |
 | `FILES_DIR` | Katalog for fil-backup (tom = deaktivert) | (tom) | Nei |
 | `HETZNER_HOST` | Hetzner StorageBox hostname (tom = deaktivert) | (tom) | Nei |
 | `HETZNER_USER` | Hetzner StorageBox brukernavn | (tom) | Nei |

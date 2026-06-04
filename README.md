@@ -41,6 +41,7 @@ Alt styres via miljovariabler - ingen prosjektspesifikk kode.
 | `DB_WAIT_TIMEOUT` | Maks ventetid (sekunder) på PostgreSQL ved oppstart | `60` | Nei |
 | `BACKUP_RETRY_MAX` | Maks antall Hetzner-opplastingsforsøk | `3` | Nei |
 | `BACKUP_RETRY_DELAY` | Startverdien (sekunder) for eksponentiell backoff ved retry | `5` | Nei |
+| `MIN_BACKUP_SIZE_BYTES` | Minimumsstørrelse (bytes) for backup-fil — fanger stille tomme dumps | `1024` | Nei |
 | `FILES_DIR` | Katalog for fil-backup | (tom = deaktivert) | Nei |
 | `HETZNER_HOST` | Hetzner StorageBox hostname | (tom = deaktivert) | Nei |
 | `HETZNER_USER` | Hetzner StorageBox brukernavn | (tom) | Nei |
