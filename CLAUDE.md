@@ -29,6 +29,8 @@ Docker Compose (per app)
 
 **Baseimage:** `postgres:17.10-alpine@sha256:979c4379dd698aba0b890599a6104e082035f98ef31d9b9291ec22f2b13059ca` (gir tilgang til `pg_dump`, `pg_isready`, `psql`)
 
+**Dependabot-policy for major-versjoner:** Ignoren for `version-update:semver-major` på docker er fjernet (fra #120). Dependabot foreslår automatisk PR-er ved PG18, PG19 osv. Disse auto-merges IKKE stille — drift-vakten i `tests/check_requirements.bats` gater majors ved å feile CI inntil `tests/stubs/pg_dump` bevisst oppdateres.
+
 **Ekstra pakker:** bash, gzip, gnupg, openssh-client, tzdata
 
 **Tidssone:** `Europe/Oslo`
