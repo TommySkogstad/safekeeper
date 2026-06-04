@@ -1,0 +1,10 @@
+#!/bin/bash
+# Stub for wget. Logger alle kall til WGET_CALL_LOG (om satt).
+# Returnerer 1 hvis STUB_WGET_FAIL=1.
+
+if [[ -n "${WGET_CALL_LOG:-}" ]]; then
+    echo "$@" >> "$WGET_CALL_LOG"
+fi
+
+[[ "${STUB_WGET_FAIL:-0}" == "1" ]] && exit 1
+exit 0

@@ -42,6 +42,9 @@ HETZNER_USER="${HETZNER_USER:-}"
 HETZNER_PORT="${HETZNER_PORT:-23}"
 HETZNER_BACKUP_PATH="${HETZNER_BACKUP_PATH:-backups/${PROJECT_NAME}}"
 
+# ntfy-varsling (tom = deaktivert)
+NTFY_URL="${NTFY_URL:-}"
+
 # SSH-nokkel via mktemp (ryddes opp via trap)
 SSH_KEY=$(mktemp)
 # sftp bruker -P (stor bokstav) for port, -q for stille modus
@@ -50,7 +53,19 @@ SFTP_OPTS=(-q -i "${SSH_KEY}" -o StrictHostKeyChecking=accept-new -o BatchMode=y
 SSH_OPTS=(-i "${SSH_KEY}" -o StrictHostKeyChecking=accept-new -o BatchMode=yes -p "${HETZNER_PORT}")
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"; }
-error() { log "ERROR: $1" >&2; exit 1; }
+
+notify_ntfy() {
+    [[ -z "${NTFY_URL:-}" ]] && return 0
+    local message="$1"
+    wget -q -O /dev/null \
+        --post-data "BACKUP FEILET (${PROJECT_NAME:-ukjent}): ${message}" \
+        --header "Title: Backup feilet: ${PROJECT_NAME:-ukjent}" \
+        --header "Priority: urgent" \
+        --header "Tags: rotating_light" \
+        "${NTFY_URL}" 2>/dev/null || true
+}
+
+error() { log "ERROR: $1" >&2; notify_ntfy "$1"; exit 1; }
 
 # .pgpass for sikker passordoverlevering (unngaar PGPASSWORD i prosessliste)
 setup_pgpass() {
@@ -388,7 +403,7 @@ main() {
 
     log "Setter opp daglig backup: $BACKUP_SCHEDULE"
     # Eksporter miljovariabler til fil for cron (BusyBox crond arver ikke Docker env)
-    env | grep -E '^(PROJECT_NAME|DB_|BACKUP_|FILES_DIR|HETZNER_|TZ)[^=]*=' | sed "s/^\\([^=]*\\)=\\(.*\\)\$/export \\1='\\2'/" > "$SAFEKEEPER_ENV_FILE"
+    env | grep -E '^(PROJECT_NAME|DB_|BACKUP_|FILES_DIR|HETZNER_|NTFY_|TZ)[^=]*=' | sed "s/^\\([^=]*\\)=\\(.*\\)\$/export \\1='\\2'/" > "$SAFEKEEPER_ENV_FILE"
     chmod 600 "$SAFEKEEPER_ENV_FILE"
     echo "$BACKUP_SCHEDULE . $SAFEKEEPER_ENV_FILE; /usr/local/bin/backup-entrypoint.sh backup >> /var/log/backup.log 2>&1" > "$CRONTAB_FILE"
 
