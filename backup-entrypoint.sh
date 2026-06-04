@@ -26,6 +26,7 @@ BACKUP_ENCRYPTION_KEY="${BACKUP_ENCRYPTION_KEY:-}"
 DB_WAIT_TIMEOUT="${DB_WAIT_TIMEOUT:-60}"
 BACKUP_RETRY_MAX="${BACKUP_RETRY_MAX:-3}"
 BACKUP_RETRY_DELAY="${BACKUP_RETRY_DELAY:-5}"
+MIN_BACKUP_SIZE_BYTES="${MIN_BACKUP_SIZE_BYTES:-1024}"
 
 # Interne fil-stier (kan overstyres i tester via env-variabler)
 SAFEKEEPER_ENV_FILE="${SAFEKEEPER_ENV_FILE:-/etc/safekeeper.env}"
@@ -84,6 +85,8 @@ check_requirements() {
         || error "BACKUP_RETRY_MAX må være et positivt heltall >= 1, fikk: '$BACKUP_RETRY_MAX'"
     [[ "$BACKUP_RETRY_DELAY" =~ ^[0-9]+$ ]] && [[ "$BACKUP_RETRY_DELAY" -ge 1 ]] \
         || error "BACKUP_RETRY_DELAY må være et positivt heltall >= 1, fikk: '$BACKUP_RETRY_DELAY'"
+    [[ "$MIN_BACKUP_SIZE_BYTES" =~ ^[0-9]+$ ]] && [[ "$MIN_BACKUP_SIZE_BYTES" -ge 1 ]] \
+        || error "MIN_BACKUP_SIZE_BYTES må være et positivt heltall >= 1, fikk: '$MIN_BACKUP_SIZE_BYTES'"
 
     if [[ -n "$HETZNER_HOST" ]]; then
         [[ "$HETZNER_HOST" =~ ^[a-zA-Z0-9.-]+$ ]] || error "HETZNER_HOST inneholder ugyldige tegn: '$HETZNER_HOST'"
@@ -258,6 +261,15 @@ run_backup() {
             --passphrase-fd 3 3< <(printf '%s' "$BACKUP_ENCRYPTION_KEY") \
         > "$backup_file"
     chmod 600 "$backup_file"
+
+    # Verifiser at backup-filen ikke er mistenkelig liten — tom output fra pg_dump
+    # gir en gyldig (men verdilos) gzip-innpakket fil som passerer gunzip -t
+    local actual_bytes
+    actual_bytes=$(wc -c < "$backup_file")
+    if [[ "$actual_bytes" -lt "$MIN_BACKUP_SIZE_BYTES" ]]; then
+        rm -f "$backup_file"
+        error "Backup-fil er mistenkelig liten (${actual_bytes} bytes < ${MIN_BACKUP_SIZE_BYTES} bytes) — pg_dump kan ha feilet"
+    fi
 
     # Verifiser at backup er gyldig (dekrypterings-test)
     if ! gpg --batch --yes --decrypt \

@@ -113,6 +113,18 @@ load_backup_lib() {
     [[ "$output" == *"forsok"* ]]
 }
 
+@test "run_backup feiler med feilmelding naar pg_dump produserer tom output (STUB_PGDUMP_EMPTY=1)" {
+    export STUB_PGDUMP_EMPTY=1
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"liten"* ]]
+    # Ingen backup-fil eller checksum skal vaere igjen
+    local files
+    files=$(find "$BACKUP_DIR" -maxdepth 1 -name "testprosjekt_*.sql.gz.gpg" | wc -l)
+    [ "$files" -eq 0 ]
+    [ ! -f "$BACKUP_SUCCESS_FILE" ]
+}
+
 @test "run_backup lykkes med SSH-fallback og logger ADVARSEL naar SFTP feiler men SSH virker (lokal backup ok)" {
     # SFTP-subsystem utilgjengelig (STUB_SFTP_FAIL=1), men SSH shell-kommandoer virker.
     # SSH mkdir fallback oppretter katalog; SFTP-verifisering feiler; SSH sha256sum er tom.

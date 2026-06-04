@@ -2,6 +2,8 @@
 # Stub for pg_dump. Ignorer alle argumenter (inkl. PGPASSFILE).
 # Skriver gyldig SQL-tekst til stdout slik at gzip downstream kan komprimere.
 # Returnerer 1 hvis STUB_PGDUMP_FAIL=1.
+# Skriver ingen output (0 bytes) hvis STUB_PGDUMP_EMPTY=1.
 [[ "${STUB_PGDUMP_FAIL:-0}" == "1" ]] && exit 1
+[[ "${STUB_PGDUMP_EMPTY:-0}" == "1" ]] && exit 0
 printf -- '-- stub pg_dump dump\nCREATE TABLE test (id INT);\nINSERT INTO test VALUES (1);\n'
 exit 0
