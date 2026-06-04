@@ -90,8 +90,8 @@ load_backup_lib() {
     [[ "$output" == *"Kunne ikke bekrefte"* ]]
 }
 
-@test "upload_to_hetzner returnerer 1 og logger katalog-feil naar baade SFTP og SSH feiler" {
-    # Bade SFTP og SSH maa feile for at katalog-oppretting skal returnere 1
+@test "upload_to_hetzner returnerer 1 naar full SFTP-feil (mkdir advarsel + put feiler)" {
+    # Bade mkdir-batch og put feiler (SFTP nede) — status 1, advarsel med 'katalog' fra mkdir
     export STUB_SFTP_FAIL=1
     export STUB_SSH_FAIL=1
     load_backup_lib
@@ -102,6 +102,23 @@ load_backup_lib() {
     run upload_to_hetzner "$dummy"
     [ "$status" -eq 1 ]
     [[ "$output" == *"katalog"* ]]
+}
+
+@test "upload_to_hetzner lykkes naar SFTP mkdir-batch feiler men put lykkes (u571604-scenario)" {
+    # StorageBox u571604: mkdir+ls-batch feiler (sftp exit 1 ved 'ls path'),
+    # SSH er utilgjengelig (restricted shell). Gammel kode returnerte 1 pga
+    # hard-gating paa mkdir. Ny kode: mkdir best-effort, put kjores uansett.
+    export STUB_SFTP_LS_FAIL=1
+    export STUB_SSH_FAIL=1
+    export STUB_SFTP_LS_SIZE=7
+    load_backup_lib
+
+    local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
+    printf 'content' > "$dummy"
+
+    run upload_to_hetzner "$dummy"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"lastet opp og verifisert"* ]]
 }
 
 @test "upload_with_retry respekterer BACKUP_RETRY_MAX=1 (ingen gjenforsok)" {
@@ -129,19 +146,6 @@ load_backup_lib() {
     [[ "$output" == *"forsok 1/2"* ]]
     [[ "$output" == *"feilet etter 2 forsok"* ]]
     [[ "$output" != *"forsok 2/2"* ]]
-}
-
-@test "upload_to_hetzner returnerer 1 og logger katalog-feil naar baade SFTP og SSH feiler (2)" {
-    export STUB_SFTP_FAIL=1
-    export STUB_SSH_FAIL=1
-    load_backup_lib
-
-    local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
-    echo "content" > "$dummy"
-
-    run upload_to_hetzner "$dummy"
-    [ "$status" -eq 1 ]
-    [[ "$output" == *"katalog"* ]]
 }
 
 @test "upload_to_hetzner feiler naar SFTP-subsystem er utilgjengelig (ingen SSH-fallback for opplasting)" {

@@ -8,6 +8,7 @@
 #   STUB_SFTP_LS_OUTPUT       - rå ls-la-formatert output for ls-la-kommandoer
 #   STUB_SFTP_LS_SIZE         - filstørrelse som returneres for ls-la-enkeltfil (default: 7)
 #   STUB_SFTP_LS_EMPTY=1      - ls -la returnerer ingen output (verifisering feiler)
+#   STUB_SFTP_LS_FAIL=1       - plain ls (uten -la) feiler (exit 1) — simulerer u571604-scenario
 #   STUB_SFTP_WRONG_SIZE=1    - returnerer feil størrelse (for å simulere størrelsesmismatch)
 #   STUB_SFTP_RM_FAIL=1       - rm-kommandoer feiler (exit 1)
 #   STUB_SFTP_PUT_FAIL=1      - put-kommandoer feiler (exit 1)
@@ -54,6 +55,9 @@ while IFS= read -r cmd; do
                     echo "-rw-r--r--    1 u12345  u12345       ${size} Jun  1 03:00 ${filename}"
                 fi
             elif [[ "$bare_cmd" == "ls "* ]]; then
+                if [[ "${STUB_SFTP_LS_FAIL:-0}" == "1" ]]; then
+                    exit 1
+                fi
                 [[ -n "${STUB_SFTP_LS_OUTPUT:-}" ]] && echo "${STUB_SFTP_LS_OUTPUT}"
             fi
             ;;
