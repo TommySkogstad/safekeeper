@@ -10,6 +10,7 @@
 #   STUB_SFTP_LS_EMPTY=1      - ls -la returnerer ingen output (verifisering feiler)
 #   STUB_SFTP_WRONG_SIZE=1    - returnerer feil størrelse (for å simulere størrelsesmismatch)
 #   STUB_SFTP_RM_FAIL=1       - rm-kommandoer feiler (exit 1)
+#   STUB_SFTP_PUT_FAIL=1      - put-kommandoer feiler (exit 1)
 #   STUB_SFTP_CALL_LOG        - fil for å logge sftp-prosess-kall (én linje per prosess-invokasjon)
 
 [[ "${STUB_SFTP_FAIL:-0}" == "1" ]] && exit 1
@@ -58,6 +59,11 @@ while IFS= read -r cmd; do
             ;;
         rm)
             if [[ "${STUB_SFTP_RM_FAIL:-0}" == "1" ]]; then
+                exit 1
+            fi
+            ;;
+        put)
+            if [[ "${STUB_SFTP_PUT_FAIL:-0}" == "1" ]]; then
                 exit 1
             fi
             ;;

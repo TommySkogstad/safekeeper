@@ -155,10 +155,8 @@ upload_to_hetzner() {
         fi
     done
 
-    if ! scp -P "${HETZNER_PORT}" -i "${SSH_KEY}" \
-        -o StrictHostKeyChecking=accept-new -o BatchMode=yes \
-        "${backup_file}" \
-        "${HETZNER_USER}@${HETZNER_HOST}:${HETZNER_BACKUP_PATH}/${filename}"; then
+    if ! printf 'put %s %s/%s\n' "$backup_file" "$HETZNER_BACKUP_PATH" "$filename" \
+        | sftp "${SFTP_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}"; then
         log "ADVARSEL: Opplasting til Hetzner feilet - lokal backup er intakt"
         return 1
     fi
@@ -189,8 +187,8 @@ upload_to_hetzner() {
             log "ADVARSEL: Checksum-mismatch etter opplasting! Lokal=$local_sha256 Remote=$remote_sha256"
             return 1
         else
-            # Verken SFTP eller SSH klarte å verifisere — stoler på at SCP exit 0 betyr vellykket opplasting
-            log "ADVARSEL: Kunne ikke bekrefte opplastet fil på Hetzner (SFTP og SSH feilet) — SCP exit 0, antar vellykket"
+            # Verken SFTP eller SSH klarte å verifisere — stoler på at SFTP put exit 0 betyr vellykket opplasting
+            log "ADVARSEL: Kunne ikke bekrefte opplastet fil på Hetzner (SFTP og SSH feilet) — SFTP put exit 0, antar vellykket"
         fi
     fi
 }
