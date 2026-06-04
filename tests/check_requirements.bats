@@ -196,3 +196,9 @@ teardown() {
     [ "$status" -eq 0 ]
     [[ "$output" != *"BACKUP_HEALTHCHECK_WINDOW"* ]]
 }
+
+@test "pg_dump --version returnerer PG16 major-versjon (versjonsdrift-vakt)" {
+    run pg_dump --version
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ [[:space:]]16\. ]]
+}

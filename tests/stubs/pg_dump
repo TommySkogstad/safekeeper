@@ -3,6 +3,8 @@
 # Skriver gyldig SQL-tekst til stdout slik at gzip downstream kan komprimere.
 # Returnerer 1 hvis STUB_PGDUMP_FAIL=1.
 # Skriver ingen output (0 bytes) hvis STUB_PGDUMP_EMPTY=1.
+# Versjon holdes synkronisert med baseimage i Dockerfile (drift-vakt: check_requirements.bats).
+[[ "${1:-}" == "--version" ]] && echo "pg_dump (PostgreSQL) 16.14" && exit 0
 [[ "${STUB_PGDUMP_FAIL:-0}" == "1" ]] && exit 1
 [[ "${STUB_PGDUMP_EMPTY:-0}" == "1" ]] && exit 0
 printf -- '-- stub pg_dump dump\nCREATE TABLE test (id INT);\nINSERT INTO test VALUES (1);\n'
