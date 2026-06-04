@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Prosjektoversikt
 
-**Safekeeper** - Parametrisert Docker-image for automatisk PostgreSQL-backup med lokal lagring (NAS) og offsite-backup til Hetzner StorageBox (SSH/SFTP). Brukes av alle Kotlin/Ktor-appene i portefoljen (biologportal, 6810, styreportal, smart-casual).
+**Safekeeper** - Parametrisert Docker-image for automatisk PostgreSQL-backup med lokal lagring (NAS) og offsite-backup til Hetzner StorageBox (SFTP). Brukes av alle Kotlin/Ktor-appene i portefoljen (biologportal, 6810, styreportal, smart-casual).
 
 Alt styres via miljovariabler - ingen prosjektspesifikk kode. Samme image brukes av alle apper.
 
@@ -126,10 +126,12 @@ Sensitive filer ryddes opp via `trap EXIT`:
 
 ### SSH
 
+- Brukes kun som fallback for SHA256-verifisering når SFTP `ls` feiler (f.eks. StorageBox u571604 med restricted shell)
 - `StrictHostKeyChecking=accept-new` (TOFU-modell - aksepterer nye nokler, avviser endrede)
 - `BatchMode=yes` (ingen interaktive prompts)
 - Port 23 (Hetzner StorageBox standard)
 - **Dato-ekstraksjon**: `cleanup_hetzner` bruker POSIX sed (ikke `grep -oP`), siden BusyBox grep i postgres:16.14-alpine ikke støtter Perl-regex
+- **Merk**: SSH brukes IKKE for directory-creation — StorageBox restricted shell avviser shell-kommandoer med "Command not found"
 
 ### Filpermisjon
 

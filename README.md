@@ -6,7 +6,7 @@
 
 Parametrisert Docker-image for PostgreSQL-backup med:
 - Lokal backup (NAS via bind mount)
-- Offsite backup til Hetzner StorageBox (SSH/SFTP)
+- Offsite backup til Hetzner StorageBox (SFTP)
 - Obligatorisk GPG-kryptering (AES256)
 - SHA256 checksum-verifisering (lokalt og etter opplasting)
 - Automatisk opprydding (retention)
