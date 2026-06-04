@@ -42,6 +42,9 @@ setup_stubs_without_gpg() {
     cp "${SAFEKEEPER_ROOT}/tests/stubs/"* "$REAL_GPG_STUBS/"
     rm -f "$REAL_GPG_STUBS/gpg"
     export PATH="${REAL_GPG_STUBS}:${PATH}"
+    # Stub pg_dump-output komprimert+kryptert er < 1024 bytes (prod-default).
+    # Sett terskelen til 50 for tester (tom pg_dump gir ~20 bytes < 50).
+    export MIN_BACKUP_SIZE_BYTES="${MIN_BACKUP_SIZE_BYTES:-50}"
 }
 
 @test "round-trip: ekte GPG --symmetric AES256 dekrypterer til identisk klartekst" {

@@ -10,4 +10,7 @@ export SAFEKEEPER_ROOT
 # Kalles fra setup() i .bats-filer som trenger stubs.
 setup_stubs() {
     export PATH="${SAFEKEEPER_ROOT}/tests/stubs:${PATH}"
+    # Stub pg_dump skriver bare ~88 bytes komprimert — langt under prod-default 1024.
+    # Sett terskelen til 50 for tester (STUB_PGDUMP_EMPTY=1 gir ~20 bytes, som er < 50).
+    export MIN_BACKUP_SIZE_BYTES="${MIN_BACKUP_SIZE_BYTES:-50}"
 }
