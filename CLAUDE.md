@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Prosjektoversikt
 
-**Safekeeper** - Parametrisert Docker-image for automatisk PostgreSQL-backup med lokal lagring (NAS) og offsite-backup til Hetzner StorageBox (SSH/SCP). Brukes av alle Kotlin/Ktor-appene i portefoljen (biologportal, 6810, styreportal, smart-casual).
+**Safekeeper** - Parametrisert Docker-image for automatisk PostgreSQL-backup med lokal lagring (NAS) og offsite-backup til Hetzner StorageBox (SSH/SFTP). Brukes av alle Kotlin/Ktor-appene i portefoljen (biologportal, 6810, styreportal, smart-casual).
 
 Alt styres via miljovariabler - ingen prosjektspesifikk kode. Samme image brukes av alle apper.
 
@@ -19,7 +19,7 @@ Docker Compose (per app)
             |                                          |
             |                                          +-- SHA256 checksum (.sha256)
             |
-            +-- SCP --> Hetzner StorageBox (offsite, EU)
+            +-- SFTP --> Hetzner StorageBox (offsite, EU)
             |              +-- SHA256-verifisering etter opplasting
             |              +-- Retry (3 forsok, eksponentiell backoff)
             |
