@@ -165,6 +165,28 @@ teardown() {
     [[ "$output" == *"HETZNER_PORT"* ]]
 }
 
+@test "backup feiler hvis HETZNER_HOST er satt men HETZNER_USER mangler" {
+    export PROJECT_NAME=testprosjekt
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    export HETZNER_HOST=hetzner.example.com
+    unset HETZNER_USER
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"HETZNER_USER"* ]]
+}
+
+@test "backup feiler hvis HETZNER_HOST er satt men HETZNER_USER er tom streng" {
+    export PROJECT_NAME=testprosjekt
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    export HETZNER_HOST=hetzner.example.com
+    export HETZNER_USER=""
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"HETZNER_USER"* ]]
+}
+
 @test "BACKUP_HEALTHCHECK_WINDOW ignoreres av entrypoint (eies av consumer docker-compose)" {
     export PROJECT_NAME=testprosjekt
     export DB_PASSWORD=hemmelig
