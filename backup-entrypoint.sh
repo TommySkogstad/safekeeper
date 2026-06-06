@@ -206,15 +206,19 @@ cleanup_hetzner() {
 
     local files_to_delete=()
     while read -r remote_file; do
-        if [[ ! "$remote_file" =~ ^[a-zA-Z0-9._-]+$ ]]; then
-            log "ADVARSEL: Avvist filnavn med ugyldige tegn: $remote_file"
+        # Noen SFTP-servere returnerer fulle stier (f.eks. "backups/hwa/fil.gpg") i ls-output.
+        # Bruk basename for å validere og referere kun filnavnet, uavhengig av format.
+        local filename
+        filename=$(basename "$remote_file")
+        if [[ ! "$filename" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+            log "ADVARSEL: Avvist filnavn med ugyldige tegn: $filename"
             continue
         fi
         local file_date
-        file_date=$(echo "$remote_file" | sed -n "s/.*${PROJECT_NAME}_\([0-9]\{8\}\).*/\1/p" || echo "")
+        file_date=$(echo "$filename" | sed -n "s/.*${PROJECT_NAME}_\([0-9]\{8\}\).*/\1/p" || echo "")
         if [[ -n "$file_date" ]] && [[ "$file_date" < "$cutoff_ts" ]]; then
-            log "Markerer for sletting: $remote_file"
-            files_to_delete+=("${HETZNER_BACKUP_PATH}/${remote_file}")
+            log "Markerer for sletting: $filename"
+            files_to_delete+=("${HETZNER_BACKUP_PATH}/${filename}")
         fi
     done < <(printf 'ls -la %s\n' "${HETZNER_BACKUP_PATH}" \
         | sftp "${SFTP_OPTS[@]}" "${HETZNER_USER}@${HETZNER_HOST}" 2>/dev/null \
@@ -396,8 +400,14 @@ main() {
     date +%s > "$BACKUP_SUCCESS_FILE"
 
     log "Setter opp daglig backup: $BACKUP_SCHEDULE"
-    # Eksporter miljovariabler til fil for cron (BusyBox crond arver ikke Docker env)
-    env | grep -E '^(PROJECT_NAME|DB_|BACKUP_|FILES_DIR|HETZNER_|NTFY_|TZ)[^=]*=' | sed "s/^\\([^=]*\\)=\\(.*\\)\$/export \\1='\\2'/" > "$SAFEKEEPER_ENV_FILE"
+    # Eksporter miljovariabler til fil for cron (BusyBox crond arver ikke Docker env).
+    # printf '%q' håndterer enkle anførselstegn og andre spesialtegn i verdiene korrekt,
+    # i motsetning til sed-basert enkelt-quote-wrapper som brytes ved ' i verdien.
+    while IFS= read -r _sk_line; do
+        _sk_key="${_sk_line%%=*}"
+        _sk_val="${_sk_line#*=}"
+        printf "export %s=%q\n" "$_sk_key" "$_sk_val"
+    done < <(env | grep -E '^(PROJECT_NAME|DB_|BACKUP_|FILES_DIR|HETZNER_|NTFY_|TZ)[^=]*=') > "$SAFEKEEPER_ENV_FILE"
     chmod 600 "$SAFEKEEPER_ENV_FILE"
     echo "$BACKUP_SCHEDULE . $SAFEKEEPER_ENV_FILE; /usr/local/bin/backup-entrypoint.sh backup >> /var/log/backup.log 2>&1" > "$CRONTAB_FILE"
 

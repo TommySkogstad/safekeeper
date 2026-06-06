@@ -151,3 +151,21 @@ sftp_process_count() {
 
     grep -q 'testprosjekt_20200101_030000.sql.gz.gpg' "$STUB_SFTP_CALL_LOG"
 }
+
+@test "cleanup_hetzner haandterer fulle stier i SFTP ls-output (Hetzner-format)" {
+    # Noen Hetzner StorageBox-konfigurasjoner returnerer fulle stier i ls-output.
+    # Uten basename-haandtering avvises slike filer med 'ugyldige tegn'-advarsel
+    # og slettes aldri (skraff akkumulerer pa Hetzner).
+    local full_path="backups/testprosjekt/testprosjekt_20200101_030000.sql.gz.gpg"
+    local l1
+    l1="-rw-r--r--    1 u12345  u12345      12345 Jan  1 2020 ${full_path}"
+    export STUB_SFTP_LS_OUTPUT="${l1}"
+
+    load_backup_lib
+    run cleanup_hetzner
+
+    # Skal IKKE logge advarsel om ugyldige tegn for denne filen
+    ! echo "$output" | grep -q "Avvist filnavn"
+    # Filen skal markeres for sletting
+    grep -q 'testprosjekt_20200101_030000.sql.gz.gpg' "$STUB_SFTP_CALL_LOG"
+}

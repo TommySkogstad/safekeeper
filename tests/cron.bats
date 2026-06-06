@@ -64,3 +64,15 @@ teardown() {
     perms=$(stat -c '%a' "$SAFEKEEPER_ENV_FILE")
     [ "$perms" = "600" ]
 }
+
+@test "safekeeper.env bevarer BACKUP_ENCRYPTION_KEY med enkle anfoerselstegn" {
+    export BACKUP_ENCRYPTION_KEY="nokkel'med'enkle"
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh"
+    [ "$status" -eq 0 ]
+
+    [ -f "$SAFEKEEPER_ENV_FILE" ]
+    # Sourcing av env-filen skal gi korrekt verdi
+    # shellcheck disable=SC1090
+    source "$SAFEKEEPER_ENV_FILE"
+    [ "$BACKUP_ENCRYPTION_KEY" = "nokkel'med'enkle" ]
+}
