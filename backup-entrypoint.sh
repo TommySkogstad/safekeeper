@@ -411,6 +411,9 @@ main() {
     chmod 600 "$SAFEKEEPER_ENV_FILE"
     echo "$BACKUP_SCHEDULE . $SAFEKEEPER_ENV_FILE; /usr/local/bin/backup-entrypoint.sh backup >> /var/log/backup.log 2>&1" > "$CRONTAB_FILE"
 
+    # Frigir flock-låsen før exec crond — ellers arver crond fd-en og blokkerer alle fremtidige cron-kjøringer.
+    exec {LOCK_FD}>&-
+
     log "Starter cron daemon..."
     exec crond -f -l 2
 }
