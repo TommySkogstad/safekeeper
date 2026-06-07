@@ -47,10 +47,12 @@ NTFY_URL="${NTFY_URL:-}"
 
 # SSH-nokkel via mktemp (ryddes opp via trap)
 SSH_KEY=$(mktemp)
-# sftp bruker -P (stor bokstav) for port, -q for stille modus
-SFTP_OPTS=(-q -i "${SSH_KEY}" -o StrictHostKeyChecking=accept-new -o BatchMode=yes -P "${HETZNER_PORT}")
+# sftp bruker -P (stor bokstav) for port, -q for stille modus.
+# ConnectTimeout/ServerAlive forhindrer at en hengt sftp-prosess arver LOCK_FD (flock)
+# og blokkerer fremtidige cron-backups i dagevis (rotaarsak for hwa/styreportal-incident 2026-06-07).
+SFTP_OPTS=(-q -i "${SSH_KEY}" -o StrictHostKeyChecking=accept-new -o BatchMode=yes -P "${HETZNER_PORT}" -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=3)
 # SSH_OPTS brukes for sha256sum-verifisering som fallback naar SFTP ls -la er utilgjengelig (ssh bruker -p i stedet for -P)
-SSH_OPTS=(-i "${SSH_KEY}" -o StrictHostKeyChecking=accept-new -o BatchMode=yes -p "${HETZNER_PORT}")
+SSH_OPTS=(-i "${SSH_KEY}" -o StrictHostKeyChecking=accept-new -o BatchMode=yes -p "${HETZNER_PORT}" -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=3)
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"; }
 
