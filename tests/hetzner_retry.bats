@@ -222,3 +222,38 @@ load_backup_lib() {
     [[ "$output" == *"feilet etter 1 forsok"* ]]
     [[ "$output" != *"Prover igjen"* ]]
 }
+
+@test "sftp-kall inkluderer ConnectTimeout og ServerAlive for aa forhindre hengt lock-fd" {
+    # Regresjonstest for incident 2026-06-07 (hwa/styreportal):
+    # En hengt sftp-prosess arvet LOCK_FD og blokkerte cron-backups i 3 dager.
+    # Verifiserer at SFTP_OPTS inneholder timeout-opsjoner slik at sftp aldri
+    # henger uendelig og frigir låsen innen ~75 sekunder.
+    local call_log
+    call_log="$(mktemp)"
+    export STUB_SFTP_CALL_LOG="$call_log"
+    export STUB_SFTP_LS_SIZE=7
+    load_backup_lib
+
+    local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
+    printf 'content' > "$dummy"
+
+    run upload_to_hetzner "$dummy"
+    [ "$status" -eq 0 ]
+
+    local sftp_args
+    sftp_args=$(cat "$call_log")
+    [[ "$sftp_args" == *"ConnectTimeout=30"* ]] || {
+        echo "FEIL: ConnectTimeout=30 mangler i sftp-kallet: $sftp_args" >&2
+        return 1
+    }
+    [[ "$sftp_args" == *"ServerAliveInterval=15"* ]] || {
+        echo "FEIL: ServerAliveInterval=15 mangler i sftp-kallet: $sftp_args" >&2
+        return 1
+    }
+    [[ "$sftp_args" == *"ServerAliveCountMax=3"* ]] || {
+        echo "FEIL: ServerAliveCountMax=3 mangler i sftp-kallet: $sftp_args" >&2
+        return 1
+    }
+
+    rm -f "$call_log"
+}
