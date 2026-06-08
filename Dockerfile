@@ -1,6 +1,6 @@
-FROM postgres:17.10-alpine@sha256:979c4379dd698aba0b890599a6104e082035f98ef31d9b9291ec22f2b13059ca
+FROM postgres:17-alpine
 
-RUN apk add --no-cache \
+RUN apk update && apk upgrade --no-cache && apk add --no-cache \
     bash \
     gzip \
     gnupg \
