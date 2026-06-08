@@ -1,4 +1,4 @@
-FROM postgres:17-alpine
+FROM postgres:18-alpine
 
 RUN apk update && apk upgrade --no-cache && apk add --no-cache \
     bash \
