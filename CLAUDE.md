@@ -27,7 +27,7 @@ Docker Compose (per app)
             +-- cleanup (retention lokalt + Hetzner)
 ```
 
-**Baseimage:** `postgres:17.10-alpine@sha256:979c4379dd698aba0b890599a6104e082035f98ef31d9b9291ec22f2b13059ca` (gir tilgang til `pg_dump`, `pg_isready`, `psql`)
+**Baseimage:** `postgres:17-alpine` (gir tilgang til `pg_dump`, `pg_isready`, `psql`)
 
 **Dependabot-policy for major-versjoner:** Ignoren for `version-update:semver-major` på docker er fjernet (fra #120). Dependabot foreslår automatisk PR-er ved PG18, PG19 osv. Disse auto-merges IKKE stille — drift-vakten i `tests/check_requirements.bats` gater majors ved å feile CI inntil `tests/stubs/pg_dump` bevisst oppdateres.
 
@@ -41,7 +41,7 @@ Docker Compose (per app)
 |-----|-------------|
 | `backup-entrypoint.sh` | Hovedskript - backup, kryptering, opplasting, opprydding, cron |
 | `restore.sh` | Gjenoppretting fra lokal backup-fil |
-| `Dockerfile` | Docker-image basert pa postgres:17.10-alpine (pinnet til digest) |
+| `Dockerfile` | Docker-image basert pa postgres:17-alpine |
 
 ### Backup-flyt
 
@@ -257,7 +257,7 @@ backup:
 | App | NAS-sti | Hetzner StorageBox | Schedule |
 |-----|---------|-------------------|----------|
 | biologportal | `/mnt/nas-apps/biologportal/backups` | u554595 (Helsinki) | `50 1 * * *` |
-| 6810 | `/mnt/nas-apps/6810/backups` | Venter pa opprettelse | `0 2 * * *` |
+| 6810 | `/mnt/nas-apps/6810/backups` | Aktiv | `0 2 * * *` |
 | styreportal | `/mnt/nas-apps/styreportal/backups` | Venter pa opprettelse | `30 1 * * *` |
 | maskemester | `/mnt/nas-apps/maskemester/backups` | Ikke satt opp | `0 5 * * *` |
 | vinforalle | `/mnt/nas-apps/vinforalle/backups` | Ikke satt opp | `0 5 * * *` |
