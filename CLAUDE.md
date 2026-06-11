@@ -46,7 +46,7 @@ Docker Compose (per app)
 ### Backup-flyt
 
 1. Venter pa at PostgreSQL er klar (`pg_isready`)
-2. `pg_dump` med `--no-owner --no-privileges --format=plain`
+2. `pg_dump` med `--no-owner --no-privileges --format=plain --clean --if-exists` (tillater restore til ikke-tom database)
 3. Komprimering med `gzip`
 4. Kryptering med `gpg --symmetric --cipher-algo AES256`
 5. Minimumsstørrelse-validering (sikrer at backup-filen ikke er mistenkelig liten)
