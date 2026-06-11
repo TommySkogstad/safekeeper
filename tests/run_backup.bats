@@ -25,15 +25,6 @@ teardown() {
     rm -f "${TMPDIR:-/tmp}/stub_gpg_encrypt_count_${BACKUP_DIR//\//_}"
 }
 
-# Laster backup-entrypoint.sh som bibliotek uten main og uten set -euo pipefail
-# slik at enkeltfunksjoner kan kalles direkte. Brukes av Hetzner-relaterte tester.
-load_backup_lib() {
-    local stripped
-    stripped=$(sed 's|^main "\$@".*$|:|; s|^set -euo pipefail.*$|:|; s|^trap cleanup EXIT.*$|:|' "$SAFEKEEPER_ROOT/backup-entrypoint.sh")
-    eval "$stripped"
-    echo "dummy-ssh-key" > "$SSH_KEY"
-}
-
 @test "run_backup oppretter kryptert backup-fil i BACKUP_DIR" {
     run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
     [ "$status" -eq 0 ]

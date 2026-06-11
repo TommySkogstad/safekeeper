@@ -28,15 +28,6 @@ teardown() {
     rm -rf "$BACKUP_DIR"
 }
 
-# Laster backup-entrypoint.sh som bibliotek uten main og uten set -euo pipefail
-# (set -euo pipefail forstyrrer BATS sin feilhåndtering i testsuiten).
-load_backup_lib() {
-    local stripped
-    stripped=$(sed 's|^main "\$@".*$|:|; s|^set -euo pipefail.*$|:|; s|^trap cleanup EXIT.*$|:|' "$SAFEKEEPER_ROOT/backup-entrypoint.sh")
-    eval "$stripped"
-    echo "dummy-ssh-key" > "$SSH_KEY"
-}
-
 @test "upload_with_retry prover 3 ganger ved vedvarende sftp-feil" {
     export STUB_SFTP_PUT_FAIL=1
     export BACKUP_RETRY_MAX=3
@@ -195,32 +186,6 @@ load_backup_lib() {
     run upload_to_hetzner "$dummy"
     [ "$status" -eq 0 ]
     [[ "$output" == *"lastet opp og verifisert"* ]]
-}
-
-@test "upload_with_retry prover 3 ganger ved vedvarende sftp put-feil" {
-    export STUB_SFTP_PUT_FAIL=1
-    export BACKUP_RETRY_MAX=3
-    load_backup_lib
-
-    local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
-    echo "content" > "$dummy"
-
-    run upload_with_retry "$dummy"
-    [[ "$output" == *"forsok 1/3"* ]]
-    [[ "$output" == *"forsok 2/3"* ]]
-}
-
-@test "upload_with_retry respekterer BACKUP_RETRY_MAX=1 med sftp put-feil (ingen gjenforsok)" {
-    export STUB_SFTP_PUT_FAIL=1
-    export BACKUP_RETRY_MAX=1
-    load_backup_lib
-
-    local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
-    echo "content" > "$dummy"
-
-    run upload_with_retry "$dummy"
-    [[ "$output" == *"feilet etter 1 forsok"* ]]
-    [[ "$output" != *"Prover igjen"* ]]
 }
 
 @test "sftp-kall inkluderer ConnectTimeout og ServerAlive for aa forhindre hengt lock-fd" {

@@ -29,16 +29,6 @@ teardown() {
     rm -f "${STUB_SFTP_CALL_LOG:-}"
 }
 
-# Laster backup-entrypoint.sh som bibliotek uten main og uten set -euo pipefail
-# (set -euo pipefail forstyrrer BATS sin feilhåndtering i testsuiten).
-load_backup_lib() {
-    local stripped
-    # Strip set -euo pipefail og trap cleanup EXIT — begge forstyrrer BATS sin feilhåndtering.
-    stripped=$(sed 's|^main "\$@".*$|:|; s|^set -euo pipefail.*$|:|; s|^trap cleanup EXIT.*$|:|' "$SAFEKEEPER_ROOT/backup-entrypoint.sh")
-    eval "$stripped"
-    echo "dummy-ssh-key" > "$SSH_KEY"
-}
-
 # ls -la-formatert linje (permissions links owner group size month day time name)
 ls_la_line() {
     echo "-rw-r--r--    1 u12345  u12345      12345 Jan  1 2020 ${1}"
@@ -62,7 +52,7 @@ sftp_process_count() {
 
     local call_count
     call_count=$(sftp_process_count)
-    [[ "$call_count" -le 2 ]]
+    [[ "$call_count" -eq 2 ]]
 }
 
 @test "cleanup_hetzner gjoor ingen rm-kall hvis ingen filer er eldre enn cutoff" {
