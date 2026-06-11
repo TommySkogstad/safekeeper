@@ -271,6 +271,7 @@ run_backup() {
     pg_dump \
         -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
         --no-owner --no-privileges --format=plain \
+        --clean --if-exists \
         | gzip \
         | gpg --batch --yes --symmetric --cipher-algo AES256 \
             --passphrase-fd 3 3< <(printf '%s' "$BACKUP_ENCRYPTION_KEY") \

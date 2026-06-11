@@ -125,6 +125,20 @@ load_backup_lib() {
     [ ! -f "$BACKUP_SUCCESS_FILE" ]
 }
 
+@test "run_backup kaller pg_dump med --clean og --if-exists for idempotent restore" {
+    local args_file
+    args_file="$(mktemp)"
+    export STUB_PGDUMP_ARGS_FILE="$args_file"
+
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -eq 0 ]
+
+    grep -qx -- '--clean' "$args_file"
+    grep -qx -- '--if-exists' "$args_file"
+
+    rm -f "$args_file"
+}
+
 @test "run_backup lykkes med SSH-fallback og logger ADVARSEL naar SFTP feiler men SSH virker (lokal backup ok)" {
     # SFTP-subsystem utilgjengelig (STUB_SFTP_FAIL=1), men SSH shell-kommandoer virker.
     # SSH mkdir fallback oppretter katalog; sftp put feiler; ingen scp-fallback.
