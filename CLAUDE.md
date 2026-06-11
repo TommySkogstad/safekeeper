@@ -49,7 +49,7 @@ Docker Compose (per app)
 2. `pg_dump` med `--no-owner --no-privileges --format=plain --clean --if-exists` (tillater restore til ikke-tom database)
 3. Komprimering med `gzip`
 4. Kryptering med `gpg --symmetric --cipher-algo AES256`
-5. Minimumsstørrelse-validering (sikrer at backup-filen ikke er mistenkelig liten)
+5. Minimumsstørrelse-validering for database- og fil-backup (sikrer at filene ikke er mistenkelig små)
 6. Verifisering (dekrypterings-test av kryptert fil)
 7. SHA256-checksum genereres
 8. Opplasting til Hetzner StorageBox med checksum-verifisering
