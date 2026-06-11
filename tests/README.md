@@ -27,14 +27,16 @@ tests/
   helpers/
     common.bash              # Felles oppsett (SAFEKEEPER_ROOT, setup_stubs)
   stubs/
-    pg_isready               # Stub for PostgreSQL-helsesjekk
-    pg_dump                  # Stub som skriver dummy-SQL til stdout
+    crond                    # Stub som avslutter umiddelbart (for cron-oppsett-tester)
+    date                     # Stub som videresender til real date; STUB_DATE_FAIL=1 feiler datoutregning
     gpg                      # Stub som pipe-through stdin (virker for --symmetric og --decrypt)
+    pg_dump                  # Stub som skriver dummy-SQL til stdout
+    pg_isready               # Stub for PostgreSQL-helsesjekk
     psql                     # Stub som konsumerer stdin (for restore-tester)
-    scp                      # Stub med STUB_SCP_FAIL for Hetzner-retry-tester
+    sftp                     # Stub for SFTP-operasjoner (opplasting, verifisering, opprydding på Hetzner)
+    sleep                    # Stub som returnerer umiddelbart
     ssh                      # Stub med STUB_SSH_FAIL, returnerer tom stdout
     wget                     # Stub for ntfy-varsling (logger kall til WGET_CALL_LOG)
-    sleep                    # Stub som returnerer umiddelbart
   backup_files.bats          # Tester for backup_files() happy-path (.tar.gz.gpg, .sha256, chmod 600)
   check_requirements.bats    # Tester for manglende miljøvariabler
   cron.bats                  # Tester for cron-oppsett og safekeeper.env-generering
@@ -53,15 +55,26 @@ Stub-binærene i `tests/stubs/` prependes til `PATH` via `setup_stubs()` i `help
 
 | Variabel | Effekt |
 |----------|--------|
+| `STUB_DATE_FAIL=1` | `date` feiler ved datoutregning (`-d`/`-v`-flagg) — brukt i retention-tester |
 | `STUB_GPG_FAIL=1` | `gpg` returnerer 1 ved kryptering |
 | `STUB_GPG_FAIL_VERIFY=1` | `gpg` returnerer 1 ved dekryptering (verifisering av database-backup) |
 | `STUB_GPG_FAIL_FILES=1` | `gpg` returnerer 1 ved kryptering av fil-backup |
 | `STUB_GPG_FAIL_VERIFY_FILES=1` | `gpg` returnerer 1 ved dekryptering av fil-backup (verifisering) |
 | `STUB_PGDUMP_FAIL=1` | `pg_dump` returnerer 1 |
 | `STUB_PGISREADY_FAIL=always` | `pg_isready` returnerer 1 (brukt i ntfy-tester) |
-| `STUB_SCP_FAIL=1` | `scp` returnerer 1 (brukt i Hetzner-retry-tester) |
-| `STUB_SSH_FAIL=1` | `ssh` returnerer 1 |
 | `STUB_PSQL_FAIL=1` | `psql` returnerer 1 |
+| `STUB_SCP_FAIL=1` | No-op — ingen `scp`-stub finnes; variabelen eksporteres i én test som dokumentasjon på at opplasting ikke bruker `scp` |
+| `STUB_SFTP_FAIL=1` | `sftp` returnerer 1 umiddelbart (tilkoblingsfeil) |
+| `STUB_SFTP_MKDIR_FAIL=1` | `sftp` mkdir-kommandoer feiler (exit 1) |
+| `STUB_SFTP_LS_OUTPUT` | Rå `ls -la`-formatert output for sftp ls-kommandoer |
+| `STUB_SFTP_LS_SIZE` | Filstørrelse som returneres for `ls -la` enkeltfil (default: 7) |
+| `STUB_SFTP_LS_EMPTY=1` | `sftp ls -la` returnerer ingen output — verifisering feiler |
+| `STUB_SFTP_LS_FAIL=1` | Plain `sftp ls` (uten `-la`) feiler — simulerer u571604-scenario med restricted shell |
+| `STUB_SFTP_WRONG_SIZE=1` | Returnerer feil filstørrelse (999999) — simulerer størrelsesmismatch etter opplasting |
+| `STUB_SFTP_RM_FAIL=1` | `sftp rm`-kommandoer feiler (exit 1) |
+| `STUB_SFTP_PUT_FAIL=1` | `sftp put`-kommandoer feiler (exit 1) |
+| `STUB_SFTP_CALL_LOG` | Fil der sftp-stuben logger alle prosess-kall og batch-kommandoer |
+| `STUB_SSH_FAIL=1` | `ssh` returnerer 1 |
 | `WGET_CALL_LOG` | `wget` stub logger alle kall til denne fila (brukt i ntfy-tester) |
 
 For testisolasjon kan `BACKUP_SUCCESS_FILE` settes til en mktemp-sti i stedet for den hardkodede `/tmp/last-backup-success`.
