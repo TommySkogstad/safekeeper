@@ -351,6 +351,13 @@ backup_files() {
         > "$backup_file"
     chmod 600 "$backup_file"
 
+    local actual_bytes
+    actual_bytes=$(wc -c < "$backup_file")
+    if [[ "$actual_bytes" -lt "$MIN_BACKUP_SIZE_BYTES" ]]; then
+        rm -f "$backup_file"
+        error "Fil-backup er mistenkelig liten (${actual_bytes} bytes < ${MIN_BACKUP_SIZE_BYTES} bytes) — tar kan ha feilet"
+    fi
+
     # Verifiser at fil-backup er gyldig (dekrypterings-test)
     if ! gpg --batch --yes --decrypt \
         --passphrase-fd 3 3< <(printf '%s' "$BACKUP_ENCRYPTION_KEY") \
