@@ -14,3 +14,12 @@ setup_stubs() {
     # Sett terskelen til 50 for tester (STUB_PGDUMP_EMPTY=1 gir ~20 bytes, som er < 50).
     export MIN_BACKUP_SIZE_BYTES="${MIN_BACKUP_SIZE_BYTES:-50}"
 }
+
+# Laster backup-entrypoint.sh som bibliotek uten main og uten set -euo pipefail
+# (set -euo pipefail og trap cleanup EXIT forstyrrer BATS sin feilhåndtering i testsuiten).
+load_backup_lib() {
+    local stripped
+    stripped=$(sed 's|^main "\$@".*$|:|; s|^set -euo pipefail.*$|:|; s|^trap cleanup EXIT.*$|:|' "$SAFEKEEPER_ROOT/backup-entrypoint.sh")
+    eval "$stripped"
+    echo "dummy-ssh-key" > "$SSH_KEY"
+}
