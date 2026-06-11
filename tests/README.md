@@ -53,7 +53,10 @@ Stub-binærene i `tests/stubs/` prependes til `PATH` via `setup_stubs()` i `help
 
 | Variabel | Effekt |
 |----------|--------|
-| `STUB_GPG_FAIL=1` | `gpg` returnerer 1 |
+| `STUB_GPG_FAIL=1` | `gpg` returnerer 1 ved kryptering |
+| `STUB_GPG_FAIL_VERIFY=1` | `gpg` returnerer 1 ved dekryptering (verifisering av database-backup) |
+| `STUB_GPG_FAIL_FILES=1` | `gpg` returnerer 1 ved kryptering av fil-backup |
+| `STUB_GPG_FAIL_VERIFY_FILES=1` | `gpg` returnerer 1 ved dekryptering av fil-backup (verifisering) |
 | `STUB_PGDUMP_FAIL=1` | `pg_dump` returnerer 1 |
 | `STUB_PGISREADY_FAIL=always` | `pg_isready` returnerer 1 (brukt i ntfy-tester) |
 | `STUB_SCP_FAIL=1` | `scp` returnerer 1 (brukt i Hetzner-retry-tester) |

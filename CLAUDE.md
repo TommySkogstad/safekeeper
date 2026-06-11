@@ -58,6 +58,8 @@ Docker Compose (per app)
 11. Skriv `/tmp/last-backup-success` med timestamp (kun hvis BÅDE database-backup OG fil-backup er vellykkede)
 12. Ved backup-feil: send proaktiv ntfy-varsling (hvis `NTFY_URL` er satt)
 
+**Opprydding av delvis filer ved feil:** Hvis kryptering eller verifisering feiler under backup (grunnet `set -euo pipefail` som avbryter pipelinen), fjernes delvis skrevne backup-filer automatisk via `trap EXIT` slik at korrupte eller ukomplette filer ikke blir liggende.
+
 ### Fil-backup (valgfritt)
 
 Hvis `FILES_DIR` er satt, tas det ogsa backup av en filkatalog:
