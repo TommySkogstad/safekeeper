@@ -7,6 +7,15 @@
 
 load 'helpers/common'
 
+# Laster backup-entrypoint.sh som bibliotek uten main/traps slik at
+# backup_files() kan kalles direkte i tester som trenger isolasjon.
+load_backup_lib() {
+    local stripped
+    stripped=$(sed 's|^main "\$@".*$|:|; s|^set -euo pipefail.*$|:|; s|^trap cleanup EXIT.*$|:|' "$SAFEKEEPER_ROOT/backup-entrypoint.sh")
+    eval "$stripped"
+    echo "dummy-ssh-key" > "$SSH_KEY"
+}
+
 setup() {
     setup_stubs
     BACKUP_DIR="$(mktemp -d)"
@@ -100,5 +109,18 @@ teardown() {
     run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
     [ "$status" -ne 0 ]
 
+    [ ! -f "$BACKUP_SUCCESS_FILE" ]
+}
+
+@test "backup_files feiler naar fil-backup er mistenkelig liten (MIN_BACKUP_SIZE_BYTES=999999)" {
+    load_backup_lib
+    export MIN_BACKUP_SIZE_BYTES=999999
+    run backup_files
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"liten"* ]]
+
+    local files
+    files=$(find "$BACKUP_DIR" -maxdepth 1 -name "testprosjekt_files_*.tar.gz.gpg" | wc -l)
+    [ "$files" -eq 0 ]
     [ ! -f "$BACKUP_SUCCESS_FILE" ]
 }
