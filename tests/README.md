@@ -66,4 +66,4 @@ Stub-binærene i `tests/stubs/` prependes til `PATH` via `setup_stubs()` i `help
 
 For testisolasjon kan `BACKUP_SUCCESS_FILE` settes til en mktemp-sti i stedet for den hardkodede `/tmp/last-backup-success`.
 
-`hetzner_retry.bats` og `hetzner_cleanup.bats` sourcer `backup-entrypoint.sh` som bibliotek (main-kallet strippes bort) slik at `upload_with_retry` og `cleanup_hetzner` kan kalles direkte uten aa kjore en full backup-flyt.
+`backup_files.bats`, `hetzner_retry.bats`, `hetzner_cleanup.bats` og `run_backup.bats` bruker `load_backup_lib()` fra `helpers/common.bash` til å loade `backup-entrypoint.sh` som bibliotek. Denne funksjonen strippes main-kallet, `set -euo pipefail` og `trap cleanup EXIT` slik at funksjoner som `upload_with_retry`, `cleanup_hetzner` og `backup_files` kan kalles direkte uten aa kjore en full backup-flyt (og uten aa forstyrre BATSs feilhåndtering).
