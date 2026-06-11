@@ -122,6 +122,34 @@ teardown() {
     [[ "$output" != *"Gjenoppretting fullfort!"* ]]
 }
 
+# --- Database happy-path ---
+
+@test "restore.sh gjenoppretter .sql.gz.gpg (dekrypter → gunzip → psql OK)" {
+    export BACKUP_ENCRYPTION_KEY=testnokkel
+    local backup_file="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
+    # gpg-stub er passthrough, så filen må inneholde ekte gzip-data
+    printf 'SELECT 1;\n' | gzip > "$backup_file"
+    run bash "$SAFEKEEPER_ROOT/restore.sh" "$backup_file"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Gjenoppretting fullfort!"* ]]
+}
+
+@test "restore.sh gjenoppretter .sql.gz (gunzip → psql OK)" {
+    local backup_file="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz"
+    printf 'SELECT 1;\n' | gzip > "$backup_file"
+    run bash "$SAFEKEEPER_ROOT/restore.sh" "$backup_file"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Gjenoppretting fullfort!"* ]]
+}
+
+@test "restore.sh gjenoppretter plain .sql (psql OK)" {
+    local backup_file="$BACKUP_DIR/testprosjekt_20260101_120000.sql"
+    printf 'SELECT 1;\n' > "$backup_file"
+    run bash "$SAFEKEEPER_ROOT/restore.sh" "$backup_file"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Gjenoppretting fullfort!"* ]]
+}
+
 @test "restore.sh gjenoppretter fil-backup til maalmappe" {
     export BACKUP_ENCRYPTION_KEY=testnokkel
     local target_dir
