@@ -38,6 +38,7 @@ teardown() {
     rm -f "$BACKUP_SUCCESS_FILE"
     [[ -n "${FILES_DIR:-}" ]] && rm -rf "$FILES_DIR"
     rm -f "${TMPDIR:-/tmp}/stub_gpg_encrypt_count_${BACKUP_DIR//\//_}"
+    rm -f "${TMPDIR:-/tmp}/stub_gpg_verify_count_${BACKUP_DIR//\//_}"
 }
 
 @test "backup_files oppretter kryptert .tar.gz.gpg-fil i BACKUP_DIR" {
@@ -102,6 +103,23 @@ teardown() {
     local files
     files=$(find "$BACKUP_DIR" -maxdepth 1 -name "testprosjekt_files_*.tar.gz.gpg.sha256" | wc -l)
     [ "$files" -eq 0 ]
+    # Ingen tom/korrupt .tar.gz.gpg-fil skal ligge igjen etter pipeline-feil
+    local gpg_files
+    gpg_files=$(find "$BACKUP_DIR" -maxdepth 1 -name "testprosjekt_files_*.tar.gz.gpg" | wc -l)
+    [ "$gpg_files" -eq 0 ]
+}
+
+@test "backup_files fjerner .tar.gz.gpg-fil naar GPG-verifisering feiler (STUB_GPG_FAIL_VERIFY_FILES=1)" {
+    export STUB_GPG_FAIL_VERIFY_FILES=1
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"verifisering feilet"* ]]
+
+    # Korrupt .tar.gz.gpg-fil skal IKKE ligge igjen etter feilet verifisering
+    local files
+    files=$(find "$BACKUP_DIR" -maxdepth 1 -name "testprosjekt_files_*.tar.gz.gpg" | wc -l)
+    [ "$files" -eq 0 ]
+    [ ! -f "$BACKUP_SUCCESS_FILE" ]
 }
 
 @test "BACKUP_SUCCESS_FILE skrives ikke naar backup_files feiler (GPG-feil)" {

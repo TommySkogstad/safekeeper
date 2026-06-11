@@ -47,6 +47,8 @@ NTFY_URL="${NTFY_URL:-}"
 
 # SSH-nokkel via mktemp (ryddes opp via trap)
 SSH_KEY=$(mktemp)
+# Aktiv backup-fil for opprydding i cleanup-trap ved pipeline-feil
+CURRENT_BACKUP_FILE=""
 # sftp bruker -P (stor bokstav) for port, -q for stille modus.
 # ConnectTimeout/ServerAlive forhindrer at en hengt sftp-prosess arver LOCK_FD (flock)
 # og blokkerer fremtidige cron-backups i dagevis (rotaarsak for hwa/styreportal-incident 2026-06-07).
@@ -81,6 +83,12 @@ setup_pgpass() {
 cleanup() {
     rm -f "${SSH_KEY:-}"
     [[ -n "${PGPASS_FILE:-}" ]] && rm -f "$PGPASS_FILE"
+    # Fjern delvis skrevet backup-fil ved pipeline-feil (set -euo pipefail avbryter
+    # midt i pipelinen og lar shell-omdirigeringen stå igjen som en tom/korrupt fil)
+    if [[ -n "${CURRENT_BACKUP_FILE:-}" ]] && [[ -f "${CURRENT_BACKUP_FILE}" ]]; then
+        rm -f "${CURRENT_BACKUP_FILE}" \
+            || log "ADVARSEL: Klarte ikke slette korrupt backup-fil ${CURRENT_BACKUP_FILE} — sjekk rettigheter"
+    fi
 }
 trap cleanup EXIT
 
@@ -252,6 +260,7 @@ run_backup() {
     local timestamp
     timestamp=$(date +%Y%m%d_%H%M%S)
     local backup_file="${BACKUP_DIR}/${PROJECT_NAME}_${timestamp}.sql.gz.gpg"
+    CURRENT_BACKUP_FILE="$backup_file"
 
     log "Starter backup..."
 
@@ -291,6 +300,7 @@ run_backup() {
     if ! gpg --batch --yes --decrypt \
         --passphrase-fd 3 3< <(printf '%s' "$BACKUP_ENCRYPTION_KEY") \
         < "$backup_file" | gunzip -t > /dev/null 2>&1; then
+        rm -f "$backup_file"
         error "Backup-verifisering feilet! Kryptert fil kan ikke dekrypteres/dekomprimeres."
     fi
 
@@ -315,6 +325,7 @@ run_backup() {
     # backup-flyten eller hindre at cron-daemonen starter via set -e)
     cleanup_hetzner || log "ADVARSEL: Hetzner-opprydding feilet — fortsetter (lokal backup er intakt)"
 
+    CURRENT_BACKUP_FILE=""
     log "Backup fullfort OK"
 }
 
@@ -342,6 +353,7 @@ backup_files() {
     local timestamp
     timestamp=$(date +%Y%m%d_%H%M%S)
     local backup_file="${BACKUP_DIR}/${PROJECT_NAME}_files_${timestamp}.tar.gz.gpg"
+    CURRENT_BACKUP_FILE="$backup_file"
 
     log "Starter fil-backup av ${FILES_DIR}..."
 
@@ -362,6 +374,7 @@ backup_files() {
     if ! gpg --batch --yes --decrypt \
         --passphrase-fd 3 3< <(printf '%s' "$BACKUP_ENCRYPTION_KEY") \
         < "$backup_file" | tar tzf - > /dev/null 2>&1; then
+        rm -f "$backup_file"
         error "Fil-backup-verifisering feilet! Kryptert arkiv kan ikke dekrypteres/pakkes ut."
     fi
 
@@ -382,6 +395,7 @@ backup_files() {
     # Rydd opp gamle fil-backups
     cleanup_local "tar.gz"
 
+    CURRENT_BACKUP_FILE=""
     log "Fil-backup fullfort OK"
 }
 
