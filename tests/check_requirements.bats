@@ -206,6 +206,42 @@ teardown() {
     [[ "$output" =~ [[:space:]]${dockerfile_major}[.] ]]
 }
 
+@test "HETZNER_SFTP_CONNECT_TIMEOUT med ikke-numerisk verdi avvises" {
+    export PROJECT_NAME=testprosjekt
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    export HETZNER_HOST=hetzner.example.com
+    export HETZNER_USER=u12345
+    export HETZNER_SFTP_CONNECT_TIMEOUT="abc"
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"HETZNER_SFTP_CONNECT_TIMEOUT"* ]]
+}
+
+@test "HETZNER_SFTP_CONNECT_TIMEOUT=0 avvises" {
+    export PROJECT_NAME=testprosjekt
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    export HETZNER_HOST=hetzner.example.com
+    export HETZNER_USER=u12345
+    export HETZNER_SFTP_CONNECT_TIMEOUT=0
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"HETZNER_SFTP_CONNECT_TIMEOUT"* ]]
+}
+
+@test "HETZNER_SFTP_CONNECT_TIMEOUT=5 aksepteres" {
+    export PROJECT_NAME=testprosjekt
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    export HETZNER_HOST=hetzner.example.com
+    export HETZNER_USER=u12345
+    export HETZNER_SFTP_CONNECT_TIMEOUT=5
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"HETZNER_SFTP_CONNECT_TIMEOUT"* ]]
+}
+
 @test "Dockerfile baseimage har SHA256-digest for supply chain-sikkerhet" {
     from_line=$(grep '^FROM postgres:' "$SAFEKEEPER_ROOT/Dockerfile")
     [[ "$from_line" == *"@sha256:"* ]] || {

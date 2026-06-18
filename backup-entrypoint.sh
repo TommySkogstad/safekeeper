@@ -41,6 +41,9 @@ HETZNER_HOST="${HETZNER_HOST:-}"
 HETZNER_USER="${HETZNER_USER:-}"
 HETZNER_PORT="${HETZNER_PORT:-23}"
 HETZNER_BACKUP_PATH="${HETZNER_BACKUP_PATH:-backups/${PROJECT_NAME}}"
+HETZNER_SFTP_CONNECT_TIMEOUT="${HETZNER_SFTP_CONNECT_TIMEOUT:-30}"
+HETZNER_SSH_ALIVE_INTERVAL="${HETZNER_SSH_ALIVE_INTERVAL:-15}"
+HETZNER_SSH_ALIVE_COUNT="${HETZNER_SSH_ALIVE_COUNT:-3}"
 
 # ntfy-varsling (tom = deaktivert)
 NTFY_URL="${NTFY_URL:-}"
@@ -52,9 +55,9 @@ CURRENT_BACKUP_FILE=""
 # sftp bruker -P (stor bokstav) for port, -q for stille modus.
 # ConnectTimeout/ServerAlive forhindrer at en hengt sftp-prosess arver LOCK_FD (flock)
 # og blokkerer fremtidige cron-backups i dagevis (rotaarsak for hwa/styreportal-incident 2026-06-07).
-SFTP_OPTS=(-q -i "${SSH_KEY}" -o StrictHostKeyChecking=accept-new -o BatchMode=yes -P "${HETZNER_PORT}" -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=3)
+SFTP_OPTS=(-q -i "${SSH_KEY}" -o StrictHostKeyChecking=accept-new -o BatchMode=yes -P "${HETZNER_PORT}" -o ConnectTimeout="${HETZNER_SFTP_CONNECT_TIMEOUT}" -o ServerAliveInterval="${HETZNER_SSH_ALIVE_INTERVAL}" -o ServerAliveCountMax="${HETZNER_SSH_ALIVE_COUNT}")
 # SSH_OPTS brukes for sha256sum-verifisering som fallback naar SFTP ls -la er utilgjengelig (ssh bruker -p i stedet for -P)
-SSH_OPTS=(-i "${SSH_KEY}" -o StrictHostKeyChecking=accept-new -o BatchMode=yes -p "${HETZNER_PORT}" -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=3)
+SSH_OPTS=(-i "${SSH_KEY}" -o StrictHostKeyChecking=accept-new -o BatchMode=yes -p "${HETZNER_PORT}" -o ConnectTimeout="${HETZNER_SFTP_CONNECT_TIMEOUT}" -o ServerAliveInterval="${HETZNER_SSH_ALIVE_INTERVAL}" -o ServerAliveCountMax="${HETZNER_SSH_ALIVE_COUNT}")
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"; }
 
@@ -119,6 +122,12 @@ check_requirements() {
         [[ "$HETZNER_USER" =~ ^[a-zA-Z0-9_-]+$ ]] || error "HETZNER_USER inneholder ugyldige tegn: '$HETZNER_USER'"
         [[ "$HETZNER_PORT" =~ ^[0-9]+$ ]] && [[ "$HETZNER_PORT" -ge 1 ]] && [[ "$HETZNER_PORT" -le 65535 ]] \
             || error "HETZNER_PORT er ugyldig: '$HETZNER_PORT'"
+        [[ "$HETZNER_SFTP_CONNECT_TIMEOUT" =~ ^[0-9]+$ ]] && [[ "$HETZNER_SFTP_CONNECT_TIMEOUT" -ge 1 ]] \
+            || error "HETZNER_SFTP_CONNECT_TIMEOUT må være et positivt heltall >= 1, fikk: '$HETZNER_SFTP_CONNECT_TIMEOUT'"
+        [[ "$HETZNER_SSH_ALIVE_INTERVAL" =~ ^[0-9]+$ ]] && [[ "$HETZNER_SSH_ALIVE_INTERVAL" -ge 1 ]] \
+            || error "HETZNER_SSH_ALIVE_INTERVAL må være et positivt heltall >= 1, fikk: '$HETZNER_SSH_ALIVE_INTERVAL'"
+        [[ "$HETZNER_SSH_ALIVE_COUNT" =~ ^[0-9]+$ ]] && [[ "$HETZNER_SSH_ALIVE_COUNT" -ge 1 ]] \
+            || error "HETZNER_SSH_ALIVE_COUNT må være et positivt heltall >= 1, fikk: '$HETZNER_SSH_ALIVE_COUNT'"
         [[ "$HETZNER_BACKUP_PATH" =~ ^[a-zA-Z0-9._/-]+$ ]] || error "HETZNER_BACKUP_PATH inneholder ugyldige tegn: '$HETZNER_BACKUP_PATH'"
         [[ "$HETZNER_BACKUP_PATH" != *".."* ]] || error "HETZNER_BACKUP_PATH kan ikke inneholde '..'"
     fi
