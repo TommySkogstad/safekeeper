@@ -108,6 +108,9 @@ openssl rand -base64 32
 | `HETZNER_USER` | Hetzner StorageBox brukernavn | (tom) | Nei |
 | `HETZNER_PORT` | Hetzner SSH-port | `23` | Nei |
 | `HETZNER_BACKUP_PATH` | Sti pa StorageBox | `backups/${PROJECT_NAME}` | Nei |
+| `HETZNER_SFTP_CONNECT_TIMEOUT` | ConnectTimeout (sekunder) for SFTP/SSH-tilkobling til StorageBox | `30` | Nei |
+| `HETZNER_SSH_ALIVE_INTERVAL` | ServerAliveInterval (sekunder) for SFTP/SSH | `15` | Nei |
+| `HETZNER_SSH_ALIVE_COUNT` | ServerAliveCountMax for SFTP/SSH | `3` | Nei |
 | `NTFY_URL` | ntfy.sh-URL for proaktiv varsling ved backup-feil (tom = deaktivert) | (tom) | Nei |
 
 ## Sikkerhet
