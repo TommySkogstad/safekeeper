@@ -38,7 +38,7 @@ tests/
     ssh                      # Stub med STUB_SSH_FAIL, returnerer tom stdout
     wget                     # Stub for ntfy-varsling (logger kall til WGET_CALL_LOG)
   backup_files.bats          # Tester for backup_files() happy-path (.tar.gz.gpg, .sha256, chmod 600)
-  check_requirements.bats    # Tester for manglende miljøvariabler
+  check_requirements.bats    # Tester for manglende miljøvariabler og SHA256-digest på baseimage
   cron.bats                  # Tester for cron-oppsett og safekeeper.env-generering
   encryption.bats            # Tester for GPG AES256-kryptering (round-trip)
   hetzner_cleanup.bats       # Tester for cleanup_hetzner (batching, ingen N+1 SSH, filnavn-validering)
