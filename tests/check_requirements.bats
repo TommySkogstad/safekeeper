@@ -242,6 +242,54 @@ teardown() {
     [[ "$output" != *"HETZNER_SFTP_CONNECT_TIMEOUT"* ]]
 }
 
+@test "HETZNER_SSH_ALIVE_INTERVAL med ikke-numerisk verdi avvises" {
+    export PROJECT_NAME=testprosjekt
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    export HETZNER_HOST=hetzner.example.com
+    export HETZNER_USER=u12345
+    export HETZNER_SSH_ALIVE_INTERVAL="abc"
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"HETZNER_SSH_ALIVE_INTERVAL"* ]]
+}
+
+@test "HETZNER_SSH_ALIVE_INTERVAL=0 avvises" {
+    export PROJECT_NAME=testprosjekt
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    export HETZNER_HOST=hetzner.example.com
+    export HETZNER_USER=u12345
+    export HETZNER_SSH_ALIVE_INTERVAL=0
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"HETZNER_SSH_ALIVE_INTERVAL"* ]]
+}
+
+@test "HETZNER_SSH_ALIVE_COUNT med ikke-numerisk verdi avvises" {
+    export PROJECT_NAME=testprosjekt
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    export HETZNER_HOST=hetzner.example.com
+    export HETZNER_USER=u12345
+    export HETZNER_SSH_ALIVE_COUNT="abc"
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"HETZNER_SSH_ALIVE_COUNT"* ]]
+}
+
+@test "HETZNER_SSH_ALIVE_COUNT=0 avvises" {
+    export PROJECT_NAME=testprosjekt
+    export DB_PASSWORD=hemmelig
+    export BACKUP_ENCRYPTION_KEY=nokkel
+    export HETZNER_HOST=hetzner.example.com
+    export HETZNER_USER=u12345
+    export HETZNER_SSH_ALIVE_COUNT=0
+    run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"HETZNER_SSH_ALIVE_COUNT"* ]]
+}
+
 @test "Dockerfile baseimage har SHA256-digest for supply chain-sikkerhet" {
     from_line=$(grep '^FROM postgres:' "$SAFEKEEPER_ROOT/Dockerfile")
     [[ "$from_line" == *"@sha256:"* ]] || {
