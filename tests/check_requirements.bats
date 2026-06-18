@@ -205,3 +205,13 @@ teardown() {
     [ "$status" -eq 0 ]
     [[ "$output" =~ [[:space:]]${dockerfile_major}[.] ]]
 }
+
+@test "Dockerfile baseimage har SHA256-digest for supply chain-sikkerhet" {
+    from_line=$(grep '^FROM postgres:' "$SAFEKEEPER_ROOT/Dockerfile")
+    [[ "$from_line" == *"@sha256:"* ]] || {
+        echo "FEIL: Dockerfile baseimage mangler SHA256-digest"
+        echo "Gjeldende linje: $from_line"
+        echo "Forventet format: FROM postgres:17-alpine@sha256:xxxxx"
+        return 1
+    }
+}
