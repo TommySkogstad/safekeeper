@@ -170,6 +170,7 @@ Når `NTFY_URL` er konfigurert, sender safekeeper en ntfy-varsling umiddelbart v
 - **Kanal**: ntfy.sh-URL (f.eks. `http://ntfy.tommytv.no/safekeeper` eller `https://ntfy.sh/mytopic`)
 - **Innhold**: Feilmelding med projekt-navn, Priority=urgent, Tag=rotating_light (rødt lys emoji)
 - **Hvis NTFY_URL er tom**: Ingen varsling sendes
+- **Hvis ntfy-varsling feiler**: Loggtes som `ADVARSEL` (f.eks. nettverksfeil, ugyldig URL) — feil med ntfy-varslingen STOPPER IKKE backup-operasjonen
 
 Dette moegner operatoerer til a reagere raskt ved backup-problemer, i stedet for a stole pa manuelle sjekker eller healthcheck-timeouts.
 

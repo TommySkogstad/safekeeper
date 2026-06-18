@@ -165,6 +165,8 @@ Varslingen inneholder:
 - `Priority: urgent` — sikrer at varsling oppfattes som høyt prioritert
 - `Tags: rotating_light` — rødt lys emoji for synlighet
 
+**Feilhåndtering**: Hvis ntfy-varsling feiler (f.eks. nettverksfeil, ugyldig URL), loggtes det som en `ADVARSEL`. Varslingsfeil stopper IKKE backup-operasjonen — kun databasen/fil-backup-feilen gjør det.
+
 Hvis `NTFY_URL` er tom eller ikke satt, sendes ingen varsling. Dette moegner operatoerer til a reagere raskt ved backup-problemer i stedet for a stole pa manuelle sjekker eller healthcheck-timeouts.
 
 ## Kryptering
