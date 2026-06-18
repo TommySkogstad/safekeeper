@@ -222,3 +222,56 @@ teardown() {
 
     rm -f "$call_log"
 }
+
+@test "SFTP_OPTS bruker HETZNER_SFTP_CONNECT_TIMEOUT naar det er satt" {
+    export HETZNER_SFTP_CONNECT_TIMEOUT=5
+    local call_log
+    call_log="$(mktemp)"
+    export STUB_SFTP_CALL_LOG="$call_log"
+    export STUB_SFTP_LS_SIZE=7
+    load_backup_lib
+
+    local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
+    printf 'content' > "$dummy"
+
+    run upload_to_hetzner "$dummy"
+    [ "$status" -eq 0 ]
+
+    local sftp_args
+    sftp_args=$(cat "$call_log")
+    [[ "$sftp_args" == *"ConnectTimeout=5"* ]] || {
+        echo "FEIL: ConnectTimeout=5 mangler i sftp-kallet: $sftp_args" >&2
+        return 1
+    }
+
+    rm -f "$call_log"
+}
+
+@test "SFTP_OPTS bruker HETZNER_SSH_ALIVE_INTERVAL og HETZNER_SSH_ALIVE_COUNT naar de er satt" {
+    export HETZNER_SSH_ALIVE_INTERVAL=60
+    export HETZNER_SSH_ALIVE_COUNT=5
+    local call_log
+    call_log="$(mktemp)"
+    export STUB_SFTP_CALL_LOG="$call_log"
+    export STUB_SFTP_LS_SIZE=7
+    load_backup_lib
+
+    local dummy="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
+    printf 'content' > "$dummy"
+
+    run upload_to_hetzner "$dummy"
+    [ "$status" -eq 0 ]
+
+    local sftp_args
+    sftp_args=$(cat "$call_log")
+    [[ "$sftp_args" == *"ServerAliveInterval=60"* ]] || {
+        echo "FEIL: ServerAliveInterval=60 mangler i sftp-kallet: $sftp_args" >&2
+        return 1
+    }
+    [[ "$sftp_args" == *"ServerAliveCountMax=5"* ]] || {
+        echo "FEIL: ServerAliveCountMax=5 mangler i sftp-kallet: $sftp_args" >&2
+        return 1
+    }
+
+    rm -f "$call_log"
+}
