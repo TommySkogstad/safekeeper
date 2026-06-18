@@ -71,7 +71,7 @@ teardown() {
     [[ "$(cat "$WGET_CALL_LOG")" == *"testprosjekt"* ]]
 }
 
-@test "ntfy-varsling feiler stille — backup-feil-exit er fortsatt 1 (STUB_WGET_FAIL=1)" {
+@test "wget-feil i notify_ntfy logger ADVARSEL og stopper ikke backup-exit (STUB_WGET_FAIL=1)" {
     export NTFY_URL="http://ntfy.test/safekeeper"
     export STUB_WGET_FAIL=1
     export STUB_PGISREADY_FAIL=always
@@ -79,4 +79,5 @@ teardown() {
 
     run bash "$SAFEKEEPER_ROOT/backup-entrypoint.sh" backup
     [ "$status" -ne 0 ]
+    [[ "$output" == *"ADVARSEL"*"ntfy"* ]]
 }

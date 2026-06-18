@@ -66,7 +66,7 @@ notify_ntfy() {
         --header "Title: Backup feilet: ${PROJECT_NAME:-ukjent}" \
         --header "Priority: urgent" \
         --header "Tags: rotating_light" \
-        "${NTFY_URL}" 2>/dev/null || true
+        "${NTFY_URL}" 2>/dev/null || log "ADVARSEL: ntfy-varsling feilet (exit $?) — sjekk NTFY_URL og nettverkstilgang"
 }
 
 error() { log "ERROR: $1" >&2; notify_ntfy "$1"; exit 1; }
