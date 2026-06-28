@@ -266,7 +266,6 @@ backup:
 | 6810 | `/mnt/nas-apps/6810/backups` | Aktiv | `0 2 * * *` |
 | styreportal | `/mnt/nas-apps/styreportal/backups` | Venter pa opprettelse | `30 1 * * *` |
 | maskemester | `/mnt/nas-apps/maskemester/backups` | Ikke satt opp | `0 5 * * *` |
-| vinforalle | `/mnt/nas-apps/vinforalle/backups` | Ikke satt opp | `0 5 * * *` |
 | smart-casual | — | — | Ikke konfigurert |
 
 ### Kryssrepo-avhengigheter
