@@ -58,6 +58,8 @@ Docker Compose (per app)
 11. Skriv `/tmp/last-backup-success` med timestamp (kun hvis BÅDE database-backup OG fil-backup er vellykkede)
 12. Ved backup-feil: send proaktiv ntfy-varsling (hvis `NTFY_URL` er satt)
 
+**Lås mot parallell kjøring:** Før en backup starter tar `backup-entrypoint.sh` en eksklusiv `flock`-lås på `BACKUP_LOCK_FILE` (default `/tmp/safekeeper-${PROJECT_NAME}.lock`). Holder en annen kjøring allerede låsen, logges en `ADVARSEL` og kjøringen hopper over — to samtidige dumper mot samme database unngås. Låse-fd-en frigis eksplisitt før `exec crond` slik at cron-demonen ikke arver låsen og blokkerer alle fremtidige planlagte kjøringer. Dekket av `tests/locking.bats`.
+
 **Opprydding av delvis filer ved feil:** Hvis kryptering eller verifisering feiler under backup (grunnet `set -euo pipefail` som avbryter pipelinen), fjernes delvis skrevne backup-filer automatisk via `trap EXIT` slik at korrupte eller ukomplette filer ikke blir liggende.
 
 ### Fil-backup (valgfritt)
@@ -103,6 +105,7 @@ openssl rand -base64 32
 | `BACKUP_RETRY_MAX` | Maks antall Hetzner-opplastingsforsøk | `3` | Nei |
 | `BACKUP_RETRY_DELAY` | Startverdien (sekunder) for eksponentiell backoff ved retry | `5` | Nei |
 | `MIN_BACKUP_SIZE_BYTES` | Minimumsstørrelse (bytes) for backup-fil — fanger stille tomme dumps | `1024` | Nei |
+| `BACKUP_LOCK_FILE` | Sti til `flock`-låsefil som hindrer parallelle backup-kjøringer | `/tmp/safekeeper-${PROJECT_NAME}.lock` | Nei |
 | `FILES_DIR` | Katalog for fil-backup (tom = deaktivert) | (tom) | Nei |
 | `HETZNER_HOST` | Hetzner StorageBox hostname (tom = deaktivert) | (tom) | Nei |
 | `HETZNER_USER` | Hetzner StorageBox brukernavn | (tom) | Nei |
