@@ -14,7 +14,7 @@
 # Krever Docker. Bygger safekeeper-imaget fra repo-roten hvis SAFEKEEPER_IMAGE
 # ikke allerede finnes lokalt.
 #
-set -uo pipefail
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
