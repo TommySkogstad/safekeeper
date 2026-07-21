@@ -5,7 +5,7 @@
 # Skriver ingen output (0 bytes) hvis STUB_PGDUMP_EMPTY=1.
 # Logger alle argumenter til STUB_PGDUMP_ARGS_FILE hvis satt.
 # Versjon holdes synkronisert med baseimage i Dockerfile (drift-vakt: check_requirements.bats).
-[[ "${1:-}" == "--version" ]] && echo "pg_dump (PostgreSQL) 17.10" && exit 0
+[[ "${1:-}" == "--version" ]] && echo "pg_dump (PostgreSQL) 18.4" && exit 0
 [[ "${STUB_PGDUMP_FAIL:-0}" == "1" ]] && exit 1
 [[ "${STUB_PGDUMP_EMPTY:-0}" == "1" ]] && exit 0
 [[ -n "${STUB_PGDUMP_ARGS_FILE:-}" ]] && printf '%s\n' "$@" > "$STUB_PGDUMP_ARGS_FILE"
