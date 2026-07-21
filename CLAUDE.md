@@ -68,6 +68,20 @@ Hvis `FILES_DIR` er satt, tas det ogsa backup av en filkatalog:
 - `tar czf` --> GPG AES256 --> `.tar.gz.gpg`
 - Samme opplastings- og oppryddingslogikk som database-backup
 
+### Restore-flyt
+
+Restore-skriptet dekrypterer og gjenoppretter backup:
+
+1. Verifiserer at backup-fil eksisterer
+2. Verifiserer SHA256-checksum hvis `.sha256`-fil finnes
+3. Dekrypterer (hvis `.gpg`) og pakker ut (hvis gzippet)
+4. **Filtrerer bort `SET transaction_timeout`-linjer** (PG17+) før restore til psql
+   - Årsak: transaction_timeout GUC finnes ikke i PostgreSQL <17; i `--single-transaction` modus gjør en ukjent GUC hele transaksjonen mislykket
+   - Trygt å fjerne: verdien er alltid 0 (deaktivert), som er PostgreSQL sin standardverdi når GUC-en finnes (#174)
+5. Gjenoppretter database i `--single-transaction` modus
+
+Denne filtrering håndteres automatisk for alle format-varianter (`.sql.gz.gpg`, `.sql.gz`, `.sql`).
+
 ## Kommandoer
 
 ```bash
