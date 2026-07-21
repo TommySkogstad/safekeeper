@@ -150,6 +150,36 @@ teardown() {
     [[ "$output" == *"Gjenoppretting fullfort!"* ]]
 }
 
+# --- Regresjon for #174: transaction_timeout-GUC (PG17+) mot PG16-maal ---
+
+@test "restore.sh filtrerer 'SET transaction_timeout' for .sql.gz.gpg (PG16-maal)" {
+    export BACKUP_ENCRYPTION_KEY=testnokkel
+    export STUB_PSQL_REJECT_TRANSACTION_TIMEOUT=1
+    local backup_file="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz.gpg"
+    printf 'SET transaction_timeout = 0;\nSELECT 1;\n' | gzip > "$backup_file"
+    run bash "$SAFEKEEPER_ROOT/restore.sh" "$backup_file"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Gjenoppretting fullfort!"* ]]
+}
+
+@test "restore.sh filtrerer 'SET transaction_timeout' for .sql.gz (PG16-maal)" {
+    export STUB_PSQL_REJECT_TRANSACTION_TIMEOUT=1
+    local backup_file="$BACKUP_DIR/testprosjekt_20260101_120000.sql.gz"
+    printf 'SET transaction_timeout = 0;\nSELECT 1;\n' | gzip > "$backup_file"
+    run bash "$SAFEKEEPER_ROOT/restore.sh" "$backup_file"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Gjenoppretting fullfort!"* ]]
+}
+
+@test "restore.sh filtrerer 'SET transaction_timeout' for ukomprimert .sql (PG16-maal)" {
+    export STUB_PSQL_REJECT_TRANSACTION_TIMEOUT=1
+    local backup_file="$BACKUP_DIR/testprosjekt_20260101_120000.sql"
+    printf 'SET transaction_timeout = 0;\nSELECT 1;\n' > "$backup_file"
+    run bash "$SAFEKEEPER_ROOT/restore.sh" "$backup_file"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Gjenoppretting fullfort!"* ]]
+}
+
 @test "restore.sh gjenoppretter fil-backup til maalmappe" {
     export BACKUP_ENCRYPTION_KEY=testnokkel
     local target_dir
