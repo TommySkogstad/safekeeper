@@ -153,13 +153,14 @@ run_matrix_for_version() {
     CLEANUP_CONTAINERS+=("$target_container")
     wait_for_pg "$target_container" || return 1
 
-    log "Gjenoppretter med safekeeper-imagets psql --single-transaction (klient 18) — samme flyt som restore.sh..."
-    docker run --rm -i --network "$NETWORK" \
+    log "Gjenoppretter med safekeeper-imagets psql --single-transaction (klient 18) — samme flyt som restore.sh, inkludert transaction_timeout-filteret fra #174..."
+    sed '/^SET transaction_timeout/d' "$dump_file" \
+        | docker run --rm -i --network "$NETWORK" \
         -e PGPASSWORD="$DB_PASSWORD" \
         --entrypoint psql \
         "$SAFEKEEPER_IMAGE" \
         --single-transaction -h "$target_container" -U "$DB_USER" -d "$DB_NAME" \
-        < "$dump_file" >/dev/null || { log "FEIL: restore feilet mot postgres:${pg_version}"; return 1; }
+        >/dev/null || { log "FEIL: restore feilet mot postgres:${pg_version}"; return 1; }
 
     local actual
     actual=$(snapshot_data "$target_container") || { log "FEIL: klarte ikke lese gjenopprettet data"; return 1; }
