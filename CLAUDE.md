@@ -82,6 +82,14 @@ Restore-skriptet dekrypterer og gjenoppretter backup:
 
 Denne filtrering håndteres automatisk for alle format-varianter (`.sql.gz.gpg`, `.sql.gz`, `.sql`).
 
+**Dump/restore-kompatibilitet**: Safekeeper-imagets `pg_dump`/`psql`-klientversjon (v18) følger baseimaget i Dockerfile. Krav:
+- Klient-versjon må være ≥ server-versjon (offisielt støttet)
+- Dump er alltid plain-format (`--format=plain`)
+- Restore inn i PostgreSQL 16 og eldre fungerer (restore.sh filtrerer `SET transaction_timeout` automatisk)
+- Restore inn i server eldre enn dump-kilden støttes kun delvis — kun `transaction_timeout` filtreres, andre versjonsspesifikke GUC-er kan feile
+
+Kompatibilitet verifiseres via `tests/manual/verify-dump-restore-matrix.sh` (manuell test mot postgres:16-alpine og postgres:17-alpine; ikke del av BATS-suite).
+
 ## Kommandoer
 
 ```bash
@@ -237,7 +245,7 @@ gh run list --repo TommySkogstad/safekeeper --limit 5
 - **Retention**: Gamle backups slettes automatisk bade lokalt og pa Hetzner etter `BACKUP_RETENTION_DAYS`.
 - **Initial backup**: Ved oppstart kjores en backup umiddelbart for cron settes opp.
 - **Linting**: ShellCheck for bash, Hadolint for Dockerfile. Begge ma passere i CI.
-- **Integrasjonstester**: BATS-tester for `backup-entrypoint.sh` og `restore.sh`. Se `tests/README.md` for detaljer og kjøring av tester lokalt.
+- **Integrasjonstester**: BATS-tester for `backup-entrypoint.sh` og `restore.sh` (stub-basert). Manuelle Docker-tester i `tests/manual/` for sanity-check mot ekte PostgreSQL-versjoner. Se `tests/README.md` for detaljer og kjøring lokalt.
 
 ## Integrasjon med andre apper
 
