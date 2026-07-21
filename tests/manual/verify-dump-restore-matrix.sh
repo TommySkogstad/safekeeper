@@ -32,6 +32,7 @@ CLEANUP_CONTAINERS=()
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"; }
 
+# shellcheck disable=SC2317  # kun kalt via 'trap cleanup EXIT' — shellcheck feiltolker dette som ubrukt naar skriptet avsluttes med en eksplisitt 'exit'-linje
 cleanup() {
     log "Rydder opp midlertidige containere og nettverk..."
     if [[ ${#CLEANUP_CONTAINERS[@]} -gt 0 ]]; then
