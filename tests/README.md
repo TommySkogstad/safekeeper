@@ -60,7 +60,7 @@ tests/
 ./tests/manual/verify-dump-restore-matrix.sh
 ```
 
-Se [README.md](../README.md#dump-restore-kompatibilitet-mellom-postgresql-versjoner) for funn og begrensninger fra siste kjøring.
+Se [README.md](../README.md#dumprestore-kompatibilitet-mellom-postgresql-versjoner) for funn og begrensninger fra siste kjøring.
 
 ## Stubs og scenariovariasjon
 
