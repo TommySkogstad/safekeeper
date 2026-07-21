@@ -48,7 +48,19 @@ tests/
   restore.bats               # Tester for restore.sh (happy-path .sql/.sql.gz/.sql.gz.gpg, fil-backup, checksum, encryption, psql-feil)
   retention.bats             # Tester for lokal backup-retention (sletting av gamle filer)
   run_backup.bats            # Tester for happy-path backup-flyt
+  manual/
+    verify-dump-restore-matrix.sh  # Manuelt skript — ekte dump/restore mot postgres:16-alpine/17-alpine i Docker
 ```
+
+## Manuelle verktøy
+
+`tests/manual/verify-dump-restore-matrix.sh` verifiserer safekeeper-imagets `pg_dump`/`psql`-klient mot ekte `postgres:16-alpine`- og `postgres:17-alpine`-servere i midlertidige Docker-containere (unikt navngitt/nettverk, rydder opp selv). Dette er IKKE en BATS-test og plukkes ALDRI opp av `bats tests/` eller `./tests/run.sh` (som kun matcher `*.bats`) — krever ekte Docker og kjøres kun manuelt:
+
+```bash
+./tests/manual/verify-dump-restore-matrix.sh
+```
+
+Se [README.md](../README.md#dump-restore-kompatibilitet-mellom-postgresql-versjoner) for funn og begrensninger fra siste kjøring.
 
 ## Stubs og scenariovariasjon
 

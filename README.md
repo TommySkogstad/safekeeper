@@ -152,6 +152,15 @@ docker compose -f docker-compose.tunnel.yml exec backup restore.sh /backups/mitt
 
 Restore verifiserer SHA256-checksum automatisk hvis `.sha256`-fil finnes.
 
+### Dump/restore-kompatibilitet mellom PostgreSQL-versjoner
+
+Safekeeper-imagets `pg_dump`/`psql`-klientversjon følger baseimaget i `Dockerfile` (for øyeblikket 18.4). Dette gir følgende krav og begrensninger, verifisert via `tests/manual/verify-dump-restore-matrix.sh` (safekeeper#171):
+
+- **Klient-versjon må være ≥ server-versjon.** `pg_dump`/`psql` støtter offisielt kun servere fra samme major-versjon og eldre — aldri nyere servere enn klienten.
+- **Dump er alltid plain-format** (`--format=plain`) — en ren SQL-tekstfil, ikke `pg_dump`s egendefinerte/tar-format. Dette er et bevisst valg for lesbarhet og enkel `psql`-restore, ikke en begrensning ved gjenoppretting.
+- **Restore inn i en server ELDRE enn PostgreSQL 17 kan feile fullstendig**, uavhengig av hvilken serverversjon dumpen opprinnelig ble tatt fra. `pg_dump` (klient v18) skriver alltid `SET transaction_timeout = 0;` i dump-preamblen — en GUC introdusert i PostgreSQL 17. Restorerer man mot en PostgreSQL 16-server (eller eldre) via `psql --single-transaction` (samme flyt som `restore.sh`), feiler denne linjen umiddelbart med `ERROR: unrecognized configuration parameter "transaction_timeout"`, som forgifter hele transaksjonen — resten av restoren ruller tilbake og databasen forblir tom. Verifisert reprodusert mot `postgres:16-alpine`; `postgres:17-alpine` restorerer korrekt (radantall, innhold og sekvenser intakt).
+- **Praktisk konsekvens**: apper som kjører PostgreSQL 16 (f.eks. biologportal, 6810) kan for øyeblikket IKKE gjenopprette backups tatt med dette imaget via `restore.sh` uten manuell inngripen (fjerne/kommentere ut `SET transaction_timeout`-linjen i dump-filen før restore). Fiks spores i safekeeper#174 — IKKE nedgrader baseimage for å unngå dette (gjeninnfører CVE-eksponeringen #170 løste).
+
 ## Proaktiv varsling (ntfy)
 
 Når `NTFY_URL` er konfigurert, sender safekeeper en ntfy-varsling umiddelbart ved backup-feil:
