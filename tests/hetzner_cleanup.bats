@@ -132,7 +132,7 @@ sftp_process_count() {
 }
 
 @test "cleanup_hetzner sletter gammel fil — dato-ekstraksjon med POSIX sed (BusyBox-kompatibel)" {
-    # grep -oP (Perl-regex) støttes ikke i BusyBox grep (postgres:17-alpine).
+    # grep -oP (Perl-regex) støttes ikke i BusyBox grep (postgres:18-alpine).
     # Verifiserer at dato-ekstraksjon fungerer og at filen inkluderes i rm-kommandoen.
     export STUB_SFTP_LS_OUTPUT="$(ls_la_line "testprosjekt_20200101_030000.sql.gz.gpg")"
 
