@@ -152,6 +152,15 @@ docker compose -f docker-compose.tunnel.yml exec backup restore.sh /backups/mitt
 
 Restore verifiserer SHA256-checksum automatisk hvis `.sha256`-fil finnes.
 
+### Dump/restore-kompatibilitet mellom PostgreSQL-versjoner
+
+Safekeeper-imagets `pg_dump`/`psql`-klientversjon følger baseimaget i `Dockerfile` (for øyeblikket 18.4). Dette gir følgende krav og begrensninger, verifisert via `tests/manual/verify-dump-restore-matrix.sh` (safekeeper#171):
+
+- **Klient-versjon må være ≥ server-versjon.** `pg_dump`/`psql` støtter offisielt kun servere fra samme major-versjon og eldre — aldri nyere servere enn klienten.
+- **Dump er alltid plain-format** (`--format=plain`) — en ren SQL-tekstfil, ikke `pg_dump`s egendefinerte/tar-format. Dette er et bevisst valg for lesbarhet og enkel `psql`-restore, ikke en begrensning ved gjenoppretting.
+- **Restore inn i en server ELDRE enn PostgreSQL 17 fungerer korrekt.** `pg_dump` (klient v18) skriver alltid `SET transaction_timeout = 0;` i dump-preamblen — en GUC introdusert i PostgreSQL 17, som ukjent for PostgreSQL 16 og eldre ville forgiftet hele `--single-transaction`-restoren. `restore.sh` filtrerer automatisk bort denne linjen før restore (safekeeper#174), så dette krever ingen manuell inngripen. Verifisert mot `postgres:16-alpine` og `postgres:17-alpine` — begge restorerer korrekt (radantall, innhold og sekvenser intakt).
+- **Restore inn i en server ELDRE enn dumpens kilde støttes for øvrig ikke** — kun `transaction_timeout`-GUC-en filtreres bort; andre kilde-versjonsspesifikke SQL-konstruksjoner i dumpen kan fortsatt feile mot en eldre målserver.
+
 ## Proaktiv varsling (ntfy)
 
 Når `NTFY_URL` er konfigurert, sender safekeeper en ntfy-varsling umiddelbart ved backup-feil:
