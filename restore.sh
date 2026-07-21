@@ -111,6 +111,11 @@ restore_backup() {
 
     log "Gjenoppretter fra: $backup_file"
 
+    # Filtrerer bort "SET transaction_timeout"-linjen som pg_dump v17+ alltid
+    # skriver i dump-preamblen. GUC-en finnes ikke i PostgreSQL <17, og siden
+    # restore kjores i --single-transaction forgifter en ukjent GUC hele
+    # transaksjonen. Trygt a fjerne: verdien 0 = deaktivert, som uansett er
+    # PostgreSQL sin egen standardverdi naar GUC-en finnes (#174).
     if [[ "$backup_file" == *.gpg ]]; then
         [[ -z "$BACKUP_ENCRYPTION_KEY" ]] && error "BACKUP_ENCRYPTION_KEY ma vaere satt for a dekryptere .gpg-filer"
         log "Dekrypterer og gjenoppretter..."
@@ -118,14 +123,17 @@ restore_backup() {
             --passphrase-fd 3 3< <(printf '%s' "$BACKUP_ENCRYPTION_KEY") \
             < "$backup_file" \
             | gunzip \
+            | sed '/^SET transaction_timeout/d' \
             | psql --single-transaction -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME"
     elif [[ "$backup_file" == *.gz ]]; then
         log "Pakker ut og gjenoppretter..."
         gunzip -c "$backup_file" \
+            | sed '/^SET transaction_timeout/d' \
             | psql --single-transaction -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME"
     else
         log "Gjenoppretter ukomprimert fil..."
-        psql --single-transaction -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" < "$backup_file"
+        sed '/^SET transaction_timeout/d' "$backup_file" \
+            | psql --single-transaction -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME"
     fi
 
     log "Gjenoppretting fullfort!"

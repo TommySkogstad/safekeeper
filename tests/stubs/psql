@@ -2,6 +2,13 @@
 # Stub for psql. Konsumerer stdin slik at pipelines ikke henger.
 # Ignorer alle argumenter (inkludert PGPASSFILE og --single-transaction).
 # Returnerer 1 hvis STUB_PSQL_FAIL=1.
+# Simulerer PostgreSQL 16 sin "unrecognized configuration parameter"-feil
+# hvis input inneholder "SET transaction_timeout" (GUC introdusert i PG17) —
+# lar oss teste regresjon for issue #174 uten en ekte PG16-server.
 [[ "${STUB_PSQL_FAIL:-0}" == "1" ]] && { cat > /dev/null; exit 1; }
-cat > /dev/null
+input=$(cat)
+if [[ "${STUB_PSQL_REJECT_TRANSACTION_TIMEOUT:-0}" == "1" ]] && [[ "$input" == *"SET transaction_timeout"* ]]; then
+    echo "ERROR:  unrecognized configuration parameter \"transaction_timeout\"" >&2
+    exit 1
+fi
 exit 0
