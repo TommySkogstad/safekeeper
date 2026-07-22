@@ -96,11 +96,17 @@ Kompatibilitet verifiseres via `tests/manual/verify-dump-restore-matrix.sh` (man
 # Manuell backup (inne i container)
 docker compose -f docker-compose.tunnel.yml exec backup /usr/local/bin/backup-entrypoint.sh backup
 
-# List tilgjengelige backups
+# List tilgjengelige database-backups
 docker compose -f docker-compose.tunnel.yml exec backup restore.sh --list
 
-# Gjenopprett fra fil
+# Gjenopprett database-backup fra fil
 docker compose -f docker-compose.tunnel.yml exec backup restore.sh /backups/prosjekt_20260302_030000.sql.gz.gpg
+
+# List tilgjengelige fil-backups
+docker compose -f docker-compose.tunnel.yml exec backup restore.sh --list-files
+
+# Gjenopprett fil-backup til valgfri målmappe
+docker compose -f docker-compose.tunnel.yml exec backup restore.sh /backups/prosjekt_files_20260302_030000.tar.gz.gpg /var/data
 
 # Se backup-logger
 docker compose -f docker-compose.tunnel.yml logs backup

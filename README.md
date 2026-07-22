@@ -143,11 +143,17 @@ docker compose -f docker-compose.tunnel.yml exec backup /usr/local/bin/backup-en
 ## Gjenoppretting
 
 ```bash
-# List tilgjengelige backups
+# List tilgjengelige database-backups
 docker compose -f docker-compose.tunnel.yml exec backup restore.sh --list
 
-# Gjenopprett fra fil
+# Gjenopprett database-backup fra fil
 docker compose -f docker-compose.tunnel.yml exec backup restore.sh /backups/mittprosjekt_20260302_030000.sql.gz.gpg
+
+# List tilgjengelige fil-backups
+docker compose -f docker-compose.tunnel.yml exec backup restore.sh --list-files
+
+# Gjenopprett fil-backup til valgfri målmappe
+docker compose -f docker-compose.tunnel.yml exec backup restore.sh /backups/mittprosjekt_files_20260302_030000.tar.gz.gpg /var/data
 ```
 
 Restore verifiserer SHA256-checksum automatisk hvis `.sha256`-fil finnes.
