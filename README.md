@@ -218,4 +218,4 @@ GitHub Actions kjorer automatisk ved push/PR:
 3. **BATS** — Kjorer integrasjonstester
 4. **Docker Build** — Verifiserer at image bygges (krever at alle tre over er grønne)
 5. **Issue-varsling** — Sender ntfy push-varsel ved nye issues (kategoriserer BUG/FEATURE)
-6. **Dependabot** — Automatisk oppdatering av GitHub Actions (ukentlig)
+6. **Dependabot** — Automatisk oppdatering av Docker-baseimage og GitHub Actions (begge ukentlig)
