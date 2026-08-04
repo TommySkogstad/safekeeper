@@ -16,6 +16,9 @@ ENV TZ=Europe/Oslo
 
 COPY backup-entrypoint.sh /usr/local/bin/
 COPY restore.sh /usr/local/bin/
+# Verifiserte Hetzner StorageBox-flaatenokler — global known_hosts leses av
+# ssh/sftp uten at /root/.ssh trenger persistering (safekeeper#190)
+COPY ssh_known_hosts /etc/ssh/ssh_known_hosts
 RUN chmod +x /usr/local/bin/backup-entrypoint.sh /usr/local/bin/restore.sh && \
     mkdir -p /backups
 

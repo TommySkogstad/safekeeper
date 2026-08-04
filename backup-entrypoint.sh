@@ -48,9 +48,11 @@ HETZNER_SSH_ALIVE_COUNT="${HETZNER_SSH_ALIVE_COUNT:-3}"
 # ntfy-varsling (tom = deaktivert)
 NTFY_URL="${NTFY_URL:-}"
 
-# Pinnet SSH host-key for Hetzner StorageBox (known_hosts-format, tom = TOFU/accept-new).
-# Hver StorageBox-konto har sin egen unike host-key — det finnes ingen felles,
-# publisert Hetzner-nokkel som kan bakes inn i imaget (#190).
+# Valgfri overstyring av host-key for Hetzner StorageBox (known_hosts-format).
+# Default (tom) verifiseres mot flaatenoklene bakt inn i /etc/ssh/ssh_known_hosts —
+# Hetzner publiserer felles fingerprints for *.your-storagebox.de, og de er
+# verifisert identiske med live keyscan av prod-boksen (#190, 2026-08-04).
+# Sett kun denne ved avvikende boks/port; den overstyrer den innbakte fila helt.
 HETZNER_HOST_KEY="${HETZNER_HOST_KEY:-}"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"; }
@@ -99,9 +101,11 @@ cleanup() {
 # (f.eks. ugyldig nokkelformat) fortsatt rydder opp SSH_KEY/KNOWN_HOSTS_FILE (#190 QA-funn).
 trap cleanup EXIT
 
-# Pinnet known_hosts-fil (public nokkelmateriale, ikke hemmelig — men holdes i
-# mktemp/cleanup-trap for konsistent hygiene sammen med SSH_KEY/PGPASS_FILE).
-HOST_KEY_OPTS=(-o StrictHostKeyChecking=accept-new)
+# Host-key-verifisering er alltid streng: default matcher de innbakte
+# flaatenoklene i /etc/ssh/ssh_known_hosts (global known_hosts leses av ssh/sftp
+# automatisk); HETZNER_HOST_KEY overstyrer med en enkelt pinnet linje (mktemp +
+# cleanup-trap for konsistent hygiene sammen med SSH_KEY/PGPASS_FILE).
+HOST_KEY_OPTS=(-o StrictHostKeyChecking=yes)
 if [[ -n "$HETZNER_HOST_KEY" ]]; then
     KNOWN_HOSTS_FILE=$(mktemp)
     printf '%s\n' "$HETZNER_HOST_KEY" > "$KNOWN_HOSTS_FILE"
@@ -114,7 +118,7 @@ if [[ -n "$HETZNER_HOST_KEY" ]]; then
     log "Hetzner host-key pinnet (StrictHostKeyChecking=yes): $(ssh-keygen -lf "$KNOWN_HOSTS_FILE" 2>/dev/null | tr '\n' ' ')"
     HOST_KEY_OPTS=(-o StrictHostKeyChecking=yes -o UserKnownHostsFile="${KNOWN_HOSTS_FILE}" -o GlobalKnownHostsFile=/dev/null)
 elif [[ -n "$HETZNER_HOST" ]]; then
-    log "ADVARSEL: HETZNER_HOST_KEY er ikke satt — SSH bruker StrictHostKeyChecking=accept-new (TOFU nullstilles ved hver container-recreate siden /root/.ssh ikke persisteres, se issue #190)"
+    log "Hetzner host-key verifiseres mot innbakte flaatenokler (/etc/ssh/ssh_known_hosts, StrictHostKeyChecking=yes) — sett HETZNER_HOST_KEY ved avvikende boks/port (#190)"
 fi
 
 # sftp bruker -P (stor bokstav) for port, -q for stille modus.

@@ -20,7 +20,7 @@ Alt styres via miljovariabler - ingen prosjektspesifikk kode.
 - **Kryptering**: Obligatorisk GPG AES256 — backup feiler hvis nokkel mangler
 - **Passord**: Overleveres via `.pgpass`-fil (ikke synlig i prosessliste)
 - **GPG-passphrase**: Via file descriptor (ikke synlig i `ps`)
-- **SSH**: `StrictHostKeyChecking=yes` mot en pinnet host-key naar `HETZNER_HOST_KEY` er satt; ellers `accept-new` (TOFU-modell, nullstilles ved hver container-recreate siden `/root/.ssh` ikke persisteres)
+- **SSH**: alltid `StrictHostKeyChecking=yes` — default mot verifiserte Hetzner-flåtenøkler bakt inn som `/etc/ssh/ssh_known_hosts`, evt. overstyrt med `HETZNER_HOST_KEY` (én pinnet linje). Ingen TOFU i noen modus (#190)
 - **Filpermisjon**: `chmod 600` pa alle backup-filer og checksum-filer
 - **Cleanup**: Sensitive filer (SSH-nokkel, pgpass) ryddes opp via trap ved avslutning
 
@@ -51,7 +51,7 @@ Alt styres via miljovariabler - ingen prosjektspesifikk kode.
 | `HETZNER_SSH_ALIVE_INTERVAL` | ServerAliveInterval (sekunder) for SFTP/SSH | `15` | Nei |
 | `HETZNER_SSH_ALIVE_COUNT` | ServerAliveCountMax for SFTP/SSH | `3` | Nei |
 | `HETZNER_BACKUP_PATH` | Sti pa StorageBox | `backups/${PROJECT_NAME}` | Nei |
-| `HETZNER_HOST_KEY` | Pinnet SSH host-key (known_hosts-format, f.eks. `[uXXXXXX.your-storagebox.de]:23 ssh-ed25519 AAAA...`) — hentes med `ssh-keyscan -p 23 <host>` og verifiseres manuelt. Tom = TOFU/`accept-new` | (tom) | Nei |
+| `HETZNER_HOST_KEY` | Valgfri overstyring av host-key (known_hosts-format, f.eks. `[uXXXXXX.your-storagebox.de]:23 ssh-ed25519 AAAA...`). Tom = innbakte flåtenøkler (`/etc/ssh/ssh_known_hosts`); alltid `StrictHostKeyChecking=yes` | (tom) | Nei |
 | `NTFY_URL` | ntfy.sh-URL for proaktiv varsling ved backup-feil | (tom = deaktivert) | Nei |
 
 ## Bruk i docker-compose

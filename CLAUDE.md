@@ -41,6 +41,7 @@ Docker Compose (per app)
 |-----|-------------|
 | `backup-entrypoint.sh` | Hovedskript - backup, kryptering, opplasting, opprydding, cron |
 | `restore.sh` | Gjenoppretting fra lokal backup-fil |
+| `ssh_known_hosts` | Verifiserte Hetzner StorageBox-flåtenøkler — bakes inn som `/etc/ssh/ssh_known_hosts` (#190) |
 | `Dockerfile` | Docker-image basert pa postgres:18-alpine |
 
 ### Backup-flyt
@@ -139,7 +140,7 @@ openssl rand -base64 32
 | `HETZNER_USER` | Hetzner StorageBox brukernavn | (tom) | Nei |
 | `HETZNER_PORT` | Hetzner SSH-port | `23` | Nei |
 | `HETZNER_BACKUP_PATH` | Sti pa StorageBox | `backups/${PROJECT_NAME}` | Nei |
-| `HETZNER_HOST_KEY` | Pinnet SSH host-key for StorageBox-kontoen (known_hosts-format, f.eks. `[uXXXXXX.your-storagebox.de]:23 ssh-ed25519 AAAA...`). Naar satt: `StrictHostKeyChecking=yes`. Tom: `accept-new` (TOFU) | (tom) | Nei |
+| `HETZNER_HOST_KEY` | Valgfri overstyring av host-key (known_hosts-format, f.eks. `[uXXXXXX.your-storagebox.de]:23 ssh-ed25519 AAAA...`). Tom: verifisering mot innbakte flåtenøkler i `/etc/ssh/ssh_known_hosts`. Alltid `StrictHostKeyChecking=yes` — ingen TOFU | (tom) | Nei |
 | `HETZNER_SFTP_CONNECT_TIMEOUT` | ConnectTimeout (sekunder) for SFTP/SSH-tilkobling til StorageBox | `30` | Nei |
 | `HETZNER_SSH_ALIVE_INTERVAL` | ServerAliveInterval (sekunder) for SFTP/SSH | `15` | Nei |
 | `HETZNER_SSH_ALIVE_COUNT` | ServerAliveCountMax for SFTP/SSH | `3` | Nei |
@@ -167,7 +168,7 @@ Sensitive filer ryddes opp via `trap EXIT`:
 ### SSH
 
 - Brukes kun som fallback for SHA256-verifisering når SFTP `ls` feiler (f.eks. StorageBox u571604 med restricted shell)
-- **Host-key-verifisering**: `StrictHostKeyChecking=yes` mot en pinnet known_hosts-fil naar `HETZNER_HOST_KEY` er satt (anbefalt); ellers `accept-new` (TOFU-modell). Siden `/root/.ssh` ikke persisteres i noe volum, nullstilles TOFU ved hver container-recreate/deploy — `HETZNER_HOST_KEY` fjerner denne risikoen helt for den aktuelle StorageBox-kontoen (#190). Hver StorageBox-konto har sin egen unike host-key (Hetzner publiserer ingen felles nøkkel for alle `*.your-storagebox.de`), så nøkkelen må hentes og verifiseres per app, f.eks. `ssh-keyscan -p 23 <host>` + manuell verifisering mot Hetzner Console/support.
+- **Host-key-verifisering**: alltid `StrictHostKeyChecking=yes` (#190). Default verifiseres mot flåtenøklene bakt inn som `/etc/ssh/ssh_known_hosts` (fra `ssh_known_hosts` i repo-roten) — Hetzner publiserer felles fingerprints for `*.your-storagebox.de`, og de er verifisert identiske med live `ssh-keyscan` av prod-boksen (2026-08-04; en tidligere antagelse om at hver konto har unik nøkkel var feil). `HETZNER_HOST_KEY`-env-varen overstyrer med én pinnet linje (mktemp-fil + `GlobalKnownHostsFile=/dev/null`) for avvikende boks/port. Ingen TOFU i noen modus — ukjent/endret nøkkel gir hard feil + ntfy via vanlig backup-feilvarsling.
 - `BatchMode=yes` (ingen interaktive prompts)
 - Port 23 (Hetzner StorageBox standard)
 - **Dato-ekstraksjon**: `cleanup_hetzner` bruker POSIX sed (ikke `grep -oP`), siden BusyBox grep i postgres:18-alpine ikke støtter Perl-regex
