@@ -139,6 +139,7 @@ openssl rand -base64 32
 | `HETZNER_USER` | Hetzner StorageBox brukernavn | (tom) | Nei |
 | `HETZNER_PORT` | Hetzner SSH-port | `23` | Nei |
 | `HETZNER_BACKUP_PATH` | Sti pa StorageBox | `backups/${PROJECT_NAME}` | Nei |
+| `HETZNER_HOST_KEY` | Pinnet SSH host-key for StorageBox-kontoen (known_hosts-format, f.eks. `[uXXXXXX.your-storagebox.de]:23 ssh-ed25519 AAAA...`). Naar satt: `StrictHostKeyChecking=yes`. Tom: `accept-new` (TOFU) | (tom) | Nei |
 | `HETZNER_SFTP_CONNECT_TIMEOUT` | ConnectTimeout (sekunder) for SFTP/SSH-tilkobling til StorageBox | `30` | Nei |
 | `HETZNER_SSH_ALIVE_INTERVAL` | ServerAliveInterval (sekunder) for SFTP/SSH | `15` | Nei |
 | `HETZNER_SSH_ALIVE_COUNT` | ServerAliveCountMax for SFTP/SSH | `3` | Nei |
@@ -161,11 +162,12 @@ Kryptering er **pakrevd** - backup feiler med feilmelding hvis `BACKUP_ENCRYPTIO
 Sensitive filer ryddes opp via `trap EXIT`:
 - SSH-nokkel (mktemp-fil)
 - `.pgpass`-fil (mktemp-fil)
+- Pinnet known_hosts-fil (mktemp-fil, kun naar `HETZNER_HOST_KEY` er satt — public nokkelmateriale, ikke hemmelig, men ryddes for konsistent hygiene)
 
 ### SSH
 
 - Brukes kun som fallback for SHA256-verifisering når SFTP `ls` feiler (f.eks. StorageBox u571604 med restricted shell)
-- `StrictHostKeyChecking=accept-new` (TOFU-modell - aksepterer nye nokler, avviser endrede)
+- **Host-key-verifisering**: `StrictHostKeyChecking=yes` mot en pinnet known_hosts-fil naar `HETZNER_HOST_KEY` er satt (anbefalt); ellers `accept-new` (TOFU-modell). Siden `/root/.ssh` ikke persisteres i noe volum, nullstilles TOFU ved hver container-recreate/deploy — `HETZNER_HOST_KEY` fjerner denne risikoen helt for den aktuelle StorageBox-kontoen (#190). Hver StorageBox-konto har sin egen unike host-key (Hetzner publiserer ingen felles nøkkel for alle `*.your-storagebox.de`), så nøkkelen må hentes og verifiseres per app, f.eks. `ssh-keyscan -p 23 <host>` + manuell verifisering mot Hetzner Console/support.
 - `BatchMode=yes` (ingen interaktive prompts)
 - Port 23 (Hetzner StorageBox standard)
 - **Dato-ekstraksjon**: `cleanup_hetzner` bruker POSIX sed (ikke `grep -oP`), siden BusyBox grep i postgres:18-alpine ikke støtter Perl-regex
