@@ -179,6 +179,7 @@ Sensitive filer ryddes opp via `trap EXIT`:
 - Alle checksum-filer: `chmod 600`
 - `.pgpass`: `chmod 600`
 - SSH-nokkel kopi: `chmod 600`
+- Pinnet known_hosts-fil (naar `HETZNER_HOST_KEY` er satt): `chmod 600`
 
 ### Checksum-verifisering
 
