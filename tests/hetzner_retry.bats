@@ -275,3 +275,64 @@ teardown() {
 
     rm -f "$call_log"
 }
+
+@test "SFTP_OPTS bruker StrictHostKeyChecking=accept-new naar HETZNER_HOST_KEY ikke er satt" {
+    unset HETZNER_HOST_KEY
+    load_backup_lib
+
+    [[ "${SFTP_OPTS[*]}" == *"StrictHostKeyChecking=accept-new"* ]] || {
+        echo "FEIL: accept-new mangler i SFTP_OPTS: ${SFTP_OPTS[*]}" >&2
+        return 1
+    }
+    [[ "${SFTP_OPTS[*]}" != *"UserKnownHostsFile"* ]] || {
+        echo "FEIL: UserKnownHostsFile skal ikke vaere satt uten HETZNER_HOST_KEY: ${SFTP_OPTS[*]}" >&2
+        return 1
+    }
+}
+
+@test "SFTP_OPTS og SSH_OPTS bruker StrictHostKeyChecking=yes og pinnet known_hosts naar HETZNER_HOST_KEY er satt" {
+    # Bruk en lokalt generert ed25519-nokkel formatert som known_hosts-linje —
+    # innholdet trenger ikke vaere en ekte Hetzner-nokkel, kun gyldig ssh-keygen-format.
+    local keyfile pubkey
+    keyfile="$(mktemp -u)"
+    ssh-keygen -t ed25519 -N '' -f "$keyfile" -q
+    pubkey=$(cut -d' ' -f1,2 "${keyfile}.pub")
+    export HETZNER_HOST_KEY="[u12345.your-storagebox.de]:23 ${pubkey}"
+    load_backup_lib
+    rm -f "$keyfile" "${keyfile}.pub"
+
+    [[ "${SFTP_OPTS[*]}" == *"StrictHostKeyChecking=yes"* ]] || {
+        echo "FEIL: StrictHostKeyChecking=yes mangler i SFTP_OPTS: ${SFTP_OPTS[*]}" >&2
+        return 1
+    }
+    [[ "${SFTP_OPTS[*]}" == *"UserKnownHostsFile=${KNOWN_HOSTS_FILE}"* ]] || {
+        echo "FEIL: UserKnownHostsFile peker ikke paa KNOWN_HOSTS_FILE: ${SFTP_OPTS[*]}" >&2
+        return 1
+    }
+    [[ "${SSH_OPTS[*]}" == *"StrictHostKeyChecking=yes"* ]] || {
+        echo "FEIL: StrictHostKeyChecking=yes mangler i SSH_OPTS: ${SSH_OPTS[*]}" >&2
+        return 1
+    }
+    [[ -f "$KNOWN_HOSTS_FILE" ]] || {
+        echo "FEIL: KNOWN_HOSTS_FILE ble ikke opprettet" >&2
+        return 1
+    }
+    grep -qF "$pubkey" "$KNOWN_HOSTS_FILE" || {
+        echo "FEIL: KNOWN_HOSTS_FILE inneholder ikke pinnet nokkel: $(cat "$KNOWN_HOSTS_FILE")" >&2
+        return 1
+    }
+}
+
+@test "ugyldig HETZNER_HOST_KEY feiler ved oppstart med tydelig feilmelding" {
+    export HETZNER_HOST_KEY="dette-er-ikke-en-gyldig-known-hosts-linje"
+
+    run bash -c "
+        stripped=\$(sed 's|^main \"\\\$@\".*\$|:|' '${SAFEKEEPER_ROOT}/backup-entrypoint.sh')
+        eval \"\$stripped\"
+    "
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"HETZNER_HOST_KEY er ikke en gyldig known_hosts-linje"* ]] || {
+        echo "FEIL: forventet feilmelding om ugyldig HETZNER_HOST_KEY, fikk: $output" >&2
+        return 1
+    }
+}

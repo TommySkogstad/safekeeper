@@ -48,16 +48,10 @@ HETZNER_SSH_ALIVE_COUNT="${HETZNER_SSH_ALIVE_COUNT:-3}"
 # ntfy-varsling (tom = deaktivert)
 NTFY_URL="${NTFY_URL:-}"
 
-# SSH-nokkel via mktemp (ryddes opp via trap)
-SSH_KEY=$(mktemp)
-# Aktiv backup-fil for opprydding i cleanup-trap ved pipeline-feil
-CURRENT_BACKUP_FILE=""
-# sftp bruker -P (stor bokstav) for port, -q for stille modus.
-# ConnectTimeout/ServerAlive forhindrer at en hengt sftp-prosess arver LOCK_FD (flock)
-# og blokkerer fremtidige cron-backups i dagevis (rotaarsak for hwa/styreportal-incident 2026-06-07).
-SFTP_OPTS=(-q -i "${SSH_KEY}" -o StrictHostKeyChecking=accept-new -o BatchMode=yes -P "${HETZNER_PORT}" -o ConnectTimeout="${HETZNER_SFTP_CONNECT_TIMEOUT}" -o ServerAliveInterval="${HETZNER_SSH_ALIVE_INTERVAL}" -o ServerAliveCountMax="${HETZNER_SSH_ALIVE_COUNT}")
-# SSH_OPTS brukes for sha256sum-verifisering som fallback naar SFTP ls -la er utilgjengelig (ssh bruker -p i stedet for -P)
-SSH_OPTS=(-i "${SSH_KEY}" -o StrictHostKeyChecking=accept-new -o BatchMode=yes -p "${HETZNER_PORT}" -o ConnectTimeout="${HETZNER_SFTP_CONNECT_TIMEOUT}" -o ServerAliveInterval="${HETZNER_SSH_ALIVE_INTERVAL}" -o ServerAliveCountMax="${HETZNER_SSH_ALIVE_COUNT}")
+# Pinnet SSH host-key for Hetzner StorageBox (known_hosts-format, tom = TOFU/accept-new).
+# Hver StorageBox-konto har sin egen unike host-key — det finnes ingen felles,
+# publisert Hetzner-nokkel som kan bakes inn i imaget (#190).
+HETZNER_HOST_KEY="${HETZNER_HOST_KEY:-}"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"; }
 
@@ -74,6 +68,34 @@ notify_ntfy() {
 
 error() { log "ERROR: $1" >&2; notify_ntfy "$1"; exit 1; }
 
+# SSH-nokkel via mktemp (ryddes opp via trap)
+SSH_KEY=$(mktemp)
+# Aktiv backup-fil for opprydding i cleanup-trap ved pipeline-feil
+CURRENT_BACKUP_FILE=""
+
+# Pinnet known_hosts-fil (public nokkelmateriale, ikke hemmelig — men holdes i
+# mktemp/cleanup-trap for konsistent hygiene sammen med SSH_KEY/PGPASS_FILE).
+KNOWN_HOSTS_FILE=""
+HOST_KEY_OPTS=(-o StrictHostKeyChecking=accept-new)
+if [[ -n "$HETZNER_HOST_KEY" ]]; then
+    KNOWN_HOSTS_FILE=$(mktemp)
+    printf '%s\n' "$HETZNER_HOST_KEY" > "$KNOWN_HOSTS_FILE"
+    chmod 600 "$KNOWN_HOSTS_FILE"
+    ssh-keygen -lf "$KNOWN_HOSTS_FILE" >/dev/null 2>&1 \
+        || error "HETZNER_HOST_KEY er ikke en gyldig known_hosts-linje (forventet format: '[host]:port ssh-ed25519 AAAA...')"
+    log "Hetzner host-key pinnet (StrictHostKeyChecking=yes): $(ssh-keygen -lf "$KNOWN_HOSTS_FILE" 2>/dev/null | tr '\n' ' ')"
+    HOST_KEY_OPTS=(-o StrictHostKeyChecking=yes -o UserKnownHostsFile="${KNOWN_HOSTS_FILE}" -o GlobalKnownHostsFile=/dev/null)
+elif [[ -n "$HETZNER_HOST" ]]; then
+    log "ADVARSEL: HETZNER_HOST_KEY er ikke satt — SSH bruker StrictHostKeyChecking=accept-new (TOFU nullstilles ved hver container-recreate siden /root/.ssh ikke persisteres, se issue #190)"
+fi
+
+# sftp bruker -P (stor bokstav) for port, -q for stille modus.
+# ConnectTimeout/ServerAlive forhindrer at en hengt sftp-prosess arver LOCK_FD (flock)
+# og blokkerer fremtidige cron-backups i dagevis (rotaarsak for hwa/styreportal-incident 2026-06-07).
+SFTP_OPTS=(-q -i "${SSH_KEY}" "${HOST_KEY_OPTS[@]}" -o BatchMode=yes -P "${HETZNER_PORT}" -o ConnectTimeout="${HETZNER_SFTP_CONNECT_TIMEOUT}" -o ServerAliveInterval="${HETZNER_SSH_ALIVE_INTERVAL}" -o ServerAliveCountMax="${HETZNER_SSH_ALIVE_COUNT}")
+# SSH_OPTS brukes for sha256sum-verifisering som fallback naar SFTP ls -la er utilgjengelig (ssh bruker -p i stedet for -P)
+SSH_OPTS=(-i "${SSH_KEY}" "${HOST_KEY_OPTS[@]}" -o BatchMode=yes -p "${HETZNER_PORT}" -o ConnectTimeout="${HETZNER_SFTP_CONNECT_TIMEOUT}" -o ServerAliveInterval="${HETZNER_SSH_ALIVE_INTERVAL}" -o ServerAliveCountMax="${HETZNER_SSH_ALIVE_COUNT}")
+
 # .pgpass for sikker passordoverlevering (unngaar PGPASSWORD i prosessliste)
 setup_pgpass() {
     PGPASS_FILE=$(mktemp)
@@ -85,6 +107,7 @@ setup_pgpass() {
 # Rydd opp sensitive filer ved avslutning
 cleanup() {
     rm -f "${SSH_KEY:-}"
+    [[ -n "${KNOWN_HOSTS_FILE:-}" ]] && rm -f "$KNOWN_HOSTS_FILE"
     [[ -n "${PGPASS_FILE:-}" ]] && rm -f "$PGPASS_FILE"
     # Fjern delvis skrevet backup-fil ved pipeline-feil (set -euo pipefail avbryter
     # midt i pipelinen og lar shell-omdirigeringen stå igjen som en tom/korrupt fil)
