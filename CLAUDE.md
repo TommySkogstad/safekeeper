@@ -165,7 +165,7 @@ Sensitive filer ryddes opp via `trap EXIT`:
 ### SSH
 
 - Brukes kun som fallback for SHA256-verifisering når SFTP `ls` feiler (f.eks. StorageBox u571604 med restricted shell)
-- `StrictHostKeyChecking=accept-new` (TOFU-modell - aksepterer nye nokler, avviser endrede)
+- `StrictHostKeyChecking=yes` med pinnede Hetzner-nokler i `/etc/ssh/ssh_known_hosts` (bakt inn via `ssh_known_hosts` i repo-roten, verifisert mot Hetzners publiserte fingerprints — safekeeper#190). Dekker `*.your-storagebox.de` på port 23 og 22; annen `HETZNER_PORT` krever ny linje i fila. Ingen TOFU — ukjent/endret nokkel gir hard feil + ntfy via vanlig backup-feilvarsling.
 - `BatchMode=yes` (ingen interaktive prompts)
 - Port 23 (Hetzner StorageBox standard)
 - **Dato-ekstraksjon**: `cleanup_hetzner` bruker POSIX sed (ikke `grep -oP`), siden BusyBox grep i postgres:18-alpine ikke støtter Perl-regex

@@ -55,9 +55,12 @@ CURRENT_BACKUP_FILE=""
 # sftp bruker -P (stor bokstav) for port, -q for stille modus.
 # ConnectTimeout/ServerAlive forhindrer at en hengt sftp-prosess arver LOCK_FD (flock)
 # og blokkerer fremtidige cron-backups i dagevis (rotaarsak for hwa/styreportal-incident 2026-06-07).
-SFTP_OPTS=(-q -i "${SSH_KEY}" -o StrictHostKeyChecking=accept-new -o BatchMode=yes -P "${HETZNER_PORT}" -o ConnectTimeout="${HETZNER_SFTP_CONNECT_TIMEOUT}" -o ServerAliveInterval="${HETZNER_SSH_ALIVE_INTERVAL}" -o ServerAliveCountMax="${HETZNER_SSH_ALIVE_COUNT}")
+# StrictHostKeyChecking=yes: host-noklene er pinnet i /etc/ssh/ssh_known_hosts (bakt inn i
+# imaget) — accept-new ga TOFU-reset ved hver container-recreate siden /root/.ssh ikke
+# persisteres (safekeeper#190).
+SFTP_OPTS=(-q -i "${SSH_KEY}" -o StrictHostKeyChecking=yes -o BatchMode=yes -P "${HETZNER_PORT}" -o ConnectTimeout="${HETZNER_SFTP_CONNECT_TIMEOUT}" -o ServerAliveInterval="${HETZNER_SSH_ALIVE_INTERVAL}" -o ServerAliveCountMax="${HETZNER_SSH_ALIVE_COUNT}")
 # SSH_OPTS brukes for sha256sum-verifisering som fallback naar SFTP ls -la er utilgjengelig (ssh bruker -p i stedet for -P)
-SSH_OPTS=(-i "${SSH_KEY}" -o StrictHostKeyChecking=accept-new -o BatchMode=yes -p "${HETZNER_PORT}" -o ConnectTimeout="${HETZNER_SFTP_CONNECT_TIMEOUT}" -o ServerAliveInterval="${HETZNER_SSH_ALIVE_INTERVAL}" -o ServerAliveCountMax="${HETZNER_SSH_ALIVE_COUNT}")
+SSH_OPTS=(-i "${SSH_KEY}" -o StrictHostKeyChecking=yes -o BatchMode=yes -p "${HETZNER_PORT}" -o ConnectTimeout="${HETZNER_SFTP_CONNECT_TIMEOUT}" -o ServerAliveInterval="${HETZNER_SSH_ALIVE_INTERVAL}" -o ServerAliveCountMax="${HETZNER_SSH_ALIVE_COUNT}")
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"; }
 
