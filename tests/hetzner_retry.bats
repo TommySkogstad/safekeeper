@@ -276,18 +276,36 @@ teardown() {
     rm -f "$call_log"
 }
 
-@test "SFTP_OPTS bruker StrictHostKeyChecking=accept-new naar HETZNER_HOST_KEY ikke er satt" {
+@test "SFTP_OPTS bruker StrictHostKeyChecking=yes mot innbakt global known_hosts naar HETZNER_HOST_KEY ikke er satt" {
     unset HETZNER_HOST_KEY
     load_backup_lib
 
-    [[ "${SFTP_OPTS[*]}" == *"StrictHostKeyChecking=accept-new"* ]] || {
-        echo "FEIL: accept-new mangler i SFTP_OPTS: ${SFTP_OPTS[*]}" >&2
+    # Default er alltid streng verifisering — flaatenoklene ligger i imagets
+    # /etc/ssh/ssh_known_hosts (global known_hosts, leses uten eksplisitt opt)
+    [[ "${SFTP_OPTS[*]}" == *"StrictHostKeyChecking=yes"* ]] || {
+        echo "FEIL: StrictHostKeyChecking=yes mangler i SFTP_OPTS: ${SFTP_OPTS[*]}" >&2
+        return 1
+    }
+    [[ "${SFTP_OPTS[*]}" != *"accept-new"* ]] || {
+        echo "FEIL: accept-new (TOFU) skal ikke lenger brukes: ${SFTP_OPTS[*]}" >&2
         return 1
     }
     [[ "${SFTP_OPTS[*]}" != *"UserKnownHostsFile"* ]] || {
         echo "FEIL: UserKnownHostsFile skal ikke vaere satt uten HETZNER_HOST_KEY: ${SFTP_OPTS[*]}" >&2
         return 1
     }
+}
+
+@test "ssh_known_hosts i repo-roten inneholder flaatenokler for *.your-storagebox.de paa port 23 og 22" {
+    local f="$BATS_TEST_DIRNAME/../ssh_known_hosts"
+    [[ -f "$f" ]] || { echo "FEIL: ssh_known_hosts mangler i repo-roten" >&2; return 1; }
+    grep -q '^\[\*\.your-storagebox\.de\]:23 ssh-ed25519 ' "$f" || {
+        echo "FEIL: mangler [*.your-storagebox.de]:23-ed25519-linje" >&2; return 1; }
+    grep -q '^\*\.your-storagebox\.de ssh-ed25519 ' "$f" || {
+        echo "FEIL: mangler port-22-variant (*.your-storagebox.de)" >&2; return 1; }
+    # Alle ikke-kommentar-linjer maa vaere gyldige known_hosts-linjer
+    ssh-keygen -lf "$f" >/dev/null 2>&1 || {
+        echo "FEIL: ssh_known_hosts har ugyldige linjer iflg. ssh-keygen -lf" >&2; return 1; }
 }
 
 @test "SFTP_OPTS og SSH_OPTS bruker StrictHostKeyChecking=yes og pinnet known_hosts naar HETZNER_HOST_KEY er satt" {
