@@ -336,3 +336,46 @@ teardown() {
         return 1
     }
 }
+
+@test "HETZNER_HOST_KEY uten vertsdel (kun nokkel-type + blob) avvises med tydelig feilmelding" {
+    local keyfile pubkey
+    keyfile="$(mktemp -u)"
+    ssh-keygen -t ed25519 -N '' -f "$keyfile" -q
+    pubkey=$(cut -d' ' -f1,2 "${keyfile}.pub")
+    export HETZNER_HOST_KEY="${pubkey}"
+    rm -f "$keyfile" "${keyfile}.pub"
+
+    run bash -c "
+        stripped=\$(sed 's|^main \"\\\$@\".*\$|:|' '${SAFEKEEPER_ROOT}/backup-entrypoint.sh')
+        eval \"\$stripped\"
+    "
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"HETZNER_HOST_KEY mangler vertsdel"* ]] || {
+        echo "FEIL: forventet feilmelding om manglende vertsdel, fikk: $output" >&2
+        return 1
+    }
+}
+
+@test "ugyldig HETZNER_HOST_KEY rydder likevel opp SSH_KEY og KNOWN_HOSTS_FILE via cleanup-trap" {
+    # Regresjonstest for QA-funn (#190): trap cleanup EXIT ble tidligere registrert
+    # ETTER HETZNER_HOST_KEY-valideringen, saa error()/exit 1 ved ugyldig nokkel
+    # lekket bade den tomme SSH_KEY-mktemp-filen og KNOWN_HOSTS_FILE i /tmp.
+    local isolated_tmpdir
+    isolated_tmpdir="$(mktemp -d)"
+    export HETZNER_HOST_KEY="dette-er-ikke-en-gyldig-known-hosts-linje"
+
+    TMPDIR="$isolated_tmpdir" run bash -c "
+        stripped=\$(sed 's|^main \"\\\$@\".*\$|:|' '${SAFEKEEPER_ROOT}/backup-entrypoint.sh')
+        eval \"\$stripped\"
+    "
+    [ "$status" -ne 0 ]
+
+    local leftover
+    leftover=$(find "$isolated_tmpdir" -type f)
+    [[ -z "$leftover" ]] || {
+        echo "FEIL: cleanup-trap ryddet ikke opp mktemp-filer ved valideringsfeil: $leftover" >&2
+        rm -rf "$isolated_tmpdir"
+        return 1
+    }
+    rm -rf "$isolated_tmpdir"
+}
