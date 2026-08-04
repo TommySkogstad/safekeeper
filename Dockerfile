@@ -7,6 +7,11 @@ RUN apk update && apk upgrade --no-cache && apk add --no-cache \
     openssh-client \
     tzdata
 
+# gosu kalles kun av postgres sin docker-entrypoint.sh, som dette imaget aldri kjorer
+# (ENTRYPOINT er backup-entrypoint.sh) — fjernes sa sikkerhetsskann ikke flagger
+# Go stdlib-CVE-er i en ubrukt binaer (jf. maskemester#171)
+RUN rm -f /usr/local/bin/gosu
+
 ENV TZ=Europe/Oslo
 
 COPY backup-entrypoint.sh /usr/local/bin/
