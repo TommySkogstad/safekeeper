@@ -161,7 +161,7 @@ Restore verifiserer SHA256-checksum automatisk hvis `.sha256`-fil finnes.
 
 ### Dump/restore-kompatibilitet mellom PostgreSQL-versjoner
 
-Safekeeper-imagets `pg_dump`/`psql`-klientversjon følger baseimaget i `Dockerfile` (for øyeblikket 18.4). Dette gir følgende krav og begrensninger, verifisert via `tests/manual/verify-dump-restore-matrix.sh` (safekeeper#171):
+Safekeeper-imagets `pg_dump`/`psql`-klientversjon følger baseimaget i `Dockerfile` (for øyeblikket 18.6). Dette gir følgende krav og begrensninger, verifisert via `tests/manual/verify-dump-restore-matrix.sh` (safekeeper#171):
 
 - **Klient-versjon må være ≥ server-versjon.** `pg_dump`/`psql` støtter offisielt kun servere fra samme major-versjon og eldre — aldri nyere servere enn klienten.
 - **Dump er alltid plain-format** (`--format=plain`) — en ren SQL-tekstfil, ikke `pg_dump`s egendefinerte/tar-format. Dette er et bevisst valg for lesbarhet og enkel `psql`-restore, ikke en begrensning ved gjenoppretting.
