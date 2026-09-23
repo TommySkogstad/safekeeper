@@ -43,6 +43,7 @@ Alt styres via miljovariabler - ingen prosjektspesifikk kode.
 | `BACKUP_RETRY_DELAY` | Startverdien (sekunder) for eksponentiell backoff ved retry | `5` | Nei |
 | `MIN_BACKUP_SIZE_BYTES` | Minimumsstørrelse (bytes) for backup-fil — fanger stille tomme dumps | `1024` | Nei |
 | `BACKUP_LOCK_FILE` | Sti til `flock`-låsefil som hindrer parallelle backup-kjøringer | `/tmp/safekeeper-${PROJECT_NAME}.lock` | Nei |
+| `SAFEKEEPER_ENV_FILE` | Sti til fil hvor miljøvariabler eksporteres for cron-jobben | `/etc/safekeeper.env` | Nei |
 | `FILES_DIR` | Katalog for fil-backup | (tom = deaktivert) | Nei |
 | `HETZNER_HOST` | Hetzner StorageBox hostname | (tom = deaktivert) | Nei |
 | `HETZNER_USER` | Hetzner StorageBox brukernavn | (tom) | Nei |
