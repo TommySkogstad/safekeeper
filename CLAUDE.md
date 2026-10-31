@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Prosjektoversikt
 
-**Safekeeper** - Parametrisert Docker-image for automatisk PostgreSQL-backup med lokal lagring (NAS) og offsite-backup til Hetzner StorageBox (SFTP). Brukes av alle Kotlin/Ktor-appene i portefoljen (biologportal, 6810, styreportal, maskemester).
+**Safekeeper** - Parametrisert Docker-image for automatisk PostgreSQL-backup med lokal lagring (NAS) og offsite-backup til Hetzner StorageBox (SFTP). Brukes av alle Kotlin/Ktor-appene i portefoljen (biologportal, 6810, styreportal).
 
 Alt styres via miljovariabler - ingen prosjektspesifikk kode. Samme image brukes av alle apper.
 
@@ -20,14 +20,14 @@ Docker Compose (per app)
             |                                          +-- SHA256 checksum (.sha256)
             |
             +-- SFTP --> Hetzner StorageBox (offsite, EU)
-            |              +-- SHA256-verifisering etter opplasting
+            |              +-- Størrelsessjekk etter opplasting (SHA256 via SSH som reserve)
             |              +-- Retry (3 forsok, eksponentiell backoff)
             |
             +-- cron (daglig schedule)
             +-- cleanup (retention lokalt + Hetzner)
 ```
 
-**Baseimage:** `postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2` (gir tilgang til `pg_dump`, `pg_isready`, `psql`). SHA256-digest påkrevd for supply chain-sikkerhet (CI sjekk i `tests/check_requirements.bats`)
+**Baseimage:** `postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873` (gir tilgang til `pg_dump`, `pg_isready`, `psql`). SHA256-digest påkrevd for supply chain-sikkerhet (CI sjekk i `tests/check_requirements.bats`)
 
 **Dependabot-policy for major-versjoner:** Ignoren for `version-update:semver-major` på docker er fjernet (fra #120). Dependabot foreslår automatisk PR-er ved PG18, PG19 osv. Disse auto-merges IKKE stille — drift-vakten i `tests/check_requirements.bats` gater majors ved å feile CI inntil `tests/stubs/pg_dump` bevisst oppdateres.
 
@@ -53,7 +53,7 @@ Docker Compose (per app)
 5. Minimumsstørrelse-validering for database- og fil-backup (sikrer at filene ikke er mistenkelig små)
 6. Verifisering (dekrypterings-test av kryptert fil)
 7. SHA256-checksum genereres
-8. Opplasting til Hetzner StorageBox med checksum-verifisering
+8. Opplasting til Hetzner StorageBox, verifisert med størrelsessjekk via SFTP `ls -la` (SHA256 via SSH som reserve)
 9. Opprydding av gamle backups (lokalt + Hetzner)
 10. Eventuell fil-backup (hvis `FILES_DIR` er satt) — samme operasjoner som ovenfor
 11. Skriv `/tmp/last-backup-success` med timestamp (kun hvis BÅDE database-backup OG fil-backup er vellykkede)
@@ -168,7 +168,7 @@ Sensitive filer ryddes opp via `trap EXIT`:
 
 ### SSH
 
-- Brukes kun som fallback for SHA256-verifisering når SFTP `ls` feiler (f.eks. StorageBox u571604 med restricted shell)
+- Brukes kun som fallback for SHA256-verifisering når SFTP `ls` feiler (f.eks. en StorageBox `<storagebox-bruker>` med restricted shell)
 - **Host-key-verifisering**: alltid `StrictHostKeyChecking=yes` (#190). Default verifiseres mot flåtenøklene bakt inn som `/etc/ssh/ssh_known_hosts` (fra `ssh_known_hosts` i repo-roten) — Hetzner publiserer felles fingerprints for `*.your-storagebox.de`, og de er verifisert identiske med live `ssh-keyscan` av prod-boksen (2026-08-04; en tidligere antagelse om at hver konto har unik nøkkel var feil). `HETZNER_HOST_KEY`-env-varen overstyrer med én pinnet linje (mktemp-fil + `GlobalKnownHostsFile=/dev/null`) for avvikende boks/port. Ingen TOFU i noen modus — ukjent/endret nøkkel gir hard feil + ntfy via vanlig backup-feilvarsling.
 - `BatchMode=yes` (ingen interaktive prompts)
 - Port 23 (Hetzner StorageBox standard)
@@ -186,7 +186,7 @@ Sensitive filer ryddes opp via `trap EXIT`:
 ### Checksum-verifisering
 
 - SHA256-checksum genereres for alle backup-filer
-- Checksum verifiseres etter opplasting til Hetzner
+- Etter opplasting til Hetzner sammenlignes filstørrelsen (SFTP `ls -la`); SHA256 sammenlignes over SSH bare når SFTP `ls` feiler, og hvis begge feiler, regnes vellykket `put` som godkjent (med ADVARSEL)
 - Restore verifiserer checksum automatisk hvis `.sha256`-fil finnes
 
 ### Krypteringsnokkel
@@ -298,10 +298,9 @@ backup:
 
 | App | NAS-sti | Hetzner StorageBox | Schedule |
 |-----|---------|-------------------|----------|
-| biologportal | `/mnt/nas-apps/biologportal/backups` | u554595 (Helsinki) | `50 1 * * *` |
+| biologportal | `/mnt/nas-apps/biologportal/backups` | `<storagebox-bruker>` (Helsinki) | `50 1 * * *` |
 | 6810 | `/mnt/nas-apps/6810/backups` | Aktiv | `0 2 * * *` |
 | styreportal | `/mnt/nas-apps/styreportal/backups` | Venter pa opprettelse | `30 1 * * *` |
-| maskemester | `/mnt/nas-apps/maskemester/backups` | Ikke satt opp | `0 5 * * *` |
 
 ### Kryssrepo-avhengigheter
 

@@ -8,12 +8,21 @@ Parametrisert Docker-image for PostgreSQL-backup med:
 - Lokal backup (NAS via bind mount)
 - Offsite backup til Hetzner StorageBox (SFTP)
 - Obligatorisk GPG-kryptering (AES256)
-- SHA256 checksum-verifisering (lokalt og etter opplasting)
+- SHA256-checksum lagres ved siden av hver backup; etter opplasting sjekkes størrelsen (SHA256 via SSH som reserve)
 - Automatisk opprydding (retention)
 - Retry-logikk for offsite-opplasting (3 forsok, eksponentiell backoff)
 - Restore-funksjonalitet med checksum-validering
 
 Alt styres via miljovariabler - ingen prosjektspesifikk kode.
+
+## Slik fungerer det
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/visuelt/backupkjeden-mork.gif">
+  <img src="docs/visuelt/backupkjeden.gif" alt="Animasjon: cron starter jobben, pg_dump tar ut databasen, dumpen komprimeres og krypteres med GPG, fila sjekkes for størrelse og prøvedekrypteres, lagres med SHA256-sum på NAS og lastes opp til offsite-lagring med SFTP; deretter går filkatalogen samme vei, og ved feil sendes et ntfy-varsel" width="720">
+</picture>
+
+Hver kjøring følger samme kjede. Cron i containeren starter jobben (standard kl. 05:00, og én gang ved oppstart), `pg_dump` tar ut databasen, og dumpen komprimeres og krypteres med GPG før den skrives til disk. Fila må være over minstestørrelsen og la seg dekryptere, ellers slettes den og jobben feiler. Godkjent backup blir liggende på NAS sammen med en SHA256-sum og lastes opp til offsite-lagring med inntil tre forsøk. Er `FILES_DIR` satt, går filkatalogen samme vei etterpå. Backuper eldre enn `BACKUP_RETENTION_DAYS` ryddes bort begge steder, og feiler noe, sendes et ntfy-varsel. ([MP4](docs/visuelt/backupkjeden.mp4), kilde i [`docs/visuelt/kilder/`](docs/visuelt/kilder/).)
 
 ## Sikkerhet
 
