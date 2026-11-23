@@ -290,6 +290,15 @@ teardown() {
     [[ "$output" == *"HETZNER_SSH_ALIVE_COUNT"* ]]
 }
 
+@test "Dockerfile baseimage er postgres 18.7 eller nyere (CVE-fiks i pg_dump, safekeeper#215)" {
+    from_line=$(grep '^FROM postgres:' "$SAFEKEEPER_ROOT/Dockerfile")
+    [[ "$from_line" =~ ^FROM[[:space:]]postgres:18\.([7-9]|[1-9][0-9])([^0-9]|$) ]] || {
+        echo "FEIL: Dockerfile baseimage er eldre enn postgres 18.7 (HIGH-CVE-er i 18.6)"
+        echo "Gjeldende linje: $from_line"
+        return 1
+    }
+}
+
 @test "Dockerfile baseimage har SHA256-digest for supply chain-sikkerhet" {
     from_line=$(grep '^FROM postgres:' "$SAFEKEEPER_ROOT/Dockerfile")
     [[ "$from_line" == *"@sha256:"* ]] || {

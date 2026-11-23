@@ -27,7 +27,7 @@ Docker Compose (per app)
             +-- cleanup (retention lokalt + Hetzner)
 ```
 
-**Baseimage:** `postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873` (gir tilgang til `pg_dump`, `pg_isready`, `psql`). SHA256-digest påkrevd for supply chain-sikkerhet (CI sjekk i `tests/check_requirements.bats`)
+**Baseimage:** `postgres:18.7-alpine@sha256:0115267ab5a509022df9319c77be365cef335adb71556c75f60f5360ee247e71` (gir tilgang til `pg_dump`, `pg_isready`, `psql`). SHA256-digest påkrevd for supply chain-sikkerhet (CI sjekk i `tests/check_requirements.bats`)
 
 **Dependabot-policy for major-versjoner:** Ignoren for `version-update:semver-major` på docker er fjernet (fra #120). Dependabot foreslår automatisk PR-er ved PG18, PG19 osv. Disse auto-merges IKKE stille — drift-vakten i `tests/check_requirements.bats` gater majors ved å feile CI inntil `tests/stubs/pg_dump` bevisst oppdateres.
 
