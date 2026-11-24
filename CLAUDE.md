@@ -27,9 +27,9 @@ Docker Compose (per app)
             +-- cleanup (retention lokalt + Hetzner)
 ```
 
-**Baseimage:** `postgres:18.7-alpine@sha256:0115267ab5a509022df9319c77be365cef335adb71556c75f60f5360ee247e71` (gir tilgang til `pg_dump`, `pg_isready`, `psql`). SHA256-digest påkrevd for supply chain-sikkerhet (CI sjekk i `tests/check_requirements.bats`)
+**Baseimage:** `postgres:19.0-alpine@sha256:cac45fb483caee3668946088a1c0532db89d5285c28dbfeac889b4068296e06f` (gir tilgang til `pg_dump`, `pg_isready`, `psql`). SHA256-digest påkrevd for supply chain-sikkerhet (CI sjekk i `tests/check_requirements.bats`)
 
-**Dependabot-policy for major-versjoner:** Ignoren for `version-update:semver-major` på docker er fjernet (fra #120). Dependabot foreslår automatisk PR-er ved PG18, PG19 osv. Disse auto-merges IKKE stille — drift-vakten i `tests/check_requirements.bats` gater majors ved å feile CI inntil `tests/stubs/pg_dump` bevisst oppdateres.
+**Dependabot-policy for major-versjoner:** Ignoren for `version-update:semver-major` på docker er fjernet (fra #120). Dependabot foreslår automatisk PR-er ved PG20 osv. (PG19 ble tatt i bruk i #221 etter vurdering på samme måte som 17 → 18 i #133 og #170). Disse auto-merges IKKE stille — drift-vakten i `tests/check_requirements.bats` gater majors ved å feile CI inntil `tests/stubs/pg_dump` bevisst oppdateres.
 
 **Ekstra pakker:** bash, gzip, gnupg, openssh-client, tzdata
 
@@ -42,7 +42,7 @@ Docker Compose (per app)
 | `backup-entrypoint.sh` | Hovedskript - backup, kryptering, opplasting, opprydding, cron |
 | `restore.sh` | Gjenoppretting fra lokal backup-fil |
 | `ssh_known_hosts` | Verifiserte Hetzner StorageBox-flåtenøkler — bakes inn som `/etc/ssh/ssh_known_hosts` (#190) |
-| `Dockerfile` | Docker-image basert pa postgres:18-alpine |
+| `Dockerfile` | Docker-image basert pa postgres:19-alpine |
 
 ### Backup-flyt
 
@@ -83,13 +83,13 @@ Restore-skriptet dekrypterer og gjenoppretter backup:
 
 Denne filtrering håndteres automatisk for alle format-varianter (`.sql.gz.gpg`, `.sql.gz`, `.sql`).
 
-**Dump/restore-kompatibilitet**: Safekeeper-imagets `pg_dump`/`psql`-klientversjon (v18) følger baseimaget i Dockerfile. Krav:
+**Dump/restore-kompatibilitet**: Safekeeper-imagets `pg_dump`/`psql`-klientversjon (v19) følger baseimaget i Dockerfile. Krav:
 - Klient-versjon må være ≥ server-versjon (offisielt støttet)
 - Dump er alltid plain-format (`--format=plain`)
 - Restore inn i PostgreSQL 16 og eldre fungerer (restore.sh filtrerer `SET transaction_timeout` automatisk)
 - Restore inn i server eldre enn dump-kilden støttes kun delvis — kun `transaction_timeout` filtreres, andre versjonsspesifikke GUC-er kan feile
 
-Kompatibilitet verifiseres via `tests/manual/verify-dump-restore-matrix.sh` (manuell test mot postgres:16-alpine og postgres:17-alpine; ikke del av BATS-suite).
+Kompatibilitet verifiseres via `tests/manual/verify-dump-restore-matrix.sh` (manuell test mot postgres:16-alpine, postgres:17-alpine og postgres:18-alpine; ikke del av BATS-suite).
 
 ## Kommandoer
 
@@ -172,7 +172,7 @@ Sensitive filer ryddes opp via `trap EXIT`:
 - **Host-key-verifisering**: alltid `StrictHostKeyChecking=yes` (#190). Default verifiseres mot flåtenøklene bakt inn som `/etc/ssh/ssh_known_hosts` (fra `ssh_known_hosts` i repo-roten) — Hetzner publiserer felles fingerprints for `*.your-storagebox.de`, og de er verifisert identiske med live `ssh-keyscan` av prod-boksen (2026-08-04; en tidligere antagelse om at hver konto har unik nøkkel var feil). `HETZNER_HOST_KEY`-env-varen overstyrer med én pinnet linje (mktemp-fil + `GlobalKnownHostsFile=/dev/null`) for avvikende boks/port. Ingen TOFU i noen modus — ukjent/endret nøkkel gir hard feil + ntfy via vanlig backup-feilvarsling.
 - `BatchMode=yes` (ingen interaktive prompts)
 - Port 23 (Hetzner StorageBox standard)
-- **Dato-ekstraksjon**: `cleanup_hetzner` bruker POSIX sed (ikke `grep -oP`), siden BusyBox grep i postgres:18-alpine ikke støtter Perl-regex
+- **Dato-ekstraksjon**: `cleanup_hetzner` bruker POSIX sed (ikke `grep -oP`), siden BusyBox grep i postgres:19-alpine ikke støtter Perl-regex
 - **Merk**: SSH brukes IKKE for directory-creation — StorageBox restricted shell avviser shell-kommandoer med "Command not found"
 
 ### Filpermisjon
