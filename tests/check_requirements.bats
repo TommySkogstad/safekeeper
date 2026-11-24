@@ -318,7 +318,7 @@ teardown() {
     [[ "$from_line" == *"@sha256:"* ]] || {
         echo "FEIL: Dockerfile baseimage mangler SHA256-digest"
         echo "Gjeldende linje: $from_line"
-        echo "Forventet format: FROM postgres:18-alpine@sha256:xxxxx"
+        echo "Forventet format: FROM postgres:19-alpine@sha256:xxxxx"
         return 1
     }
 }
