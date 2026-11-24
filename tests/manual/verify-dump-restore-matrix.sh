@@ -1,8 +1,8 @@
 #!/bin/bash
 #
 # Manuell verifisering av dump/restore-matrise (safekeeper #171 / #133):
-# safekeeper-imagets pg_dump/psql (klient v18) mot postgres:16-alpine og
-# postgres:17-alpine som SERVERE. Bruker samme flagg/flyt som
+# safekeeper-imagets pg_dump/psql (klient v19) mot postgres:16-alpine,
+# postgres:17-alpine og postgres:18-alpine som SERVERE. Bruker samme flagg/flyt som
 # backup-entrypoint.sh og restore.sh.
 #
 # Kjøres KUN manuelt — IKKE del av BATS-suiten (bats tests/ / tests/run.sh
@@ -118,7 +118,7 @@ run_matrix_for_version() {
     local target_container="safekeeper-matrix-tgt-${suffix}"
     local dump_file="${WORKDIR}/dump-${pg_version}.sql"
 
-    log "=== Matrise: postgres:${pg_version} (server) mot safekeeper pg-klient 18 ==="
+    log "=== Matrise: postgres:${pg_version} (server) mot safekeeper pg-klient 19 ==="
 
     log "Henter postgres:${pg_version}..."
     docker pull "postgres:${pg_version}" >/dev/null || { log "FEIL: klarte ikke hente postgres:${pg_version}"; return 1; }
@@ -137,7 +137,7 @@ run_matrix_for_version() {
     expected=$(snapshot_data "$source_container") || { log "FEIL: klarte ikke lese kildedata"; return 1; }
     log "Kildedata: kunder=$(cut -d'|' -f1 <<<"$expected") ordre=$(cut -d'|' -f2 <<<"$expected")"
 
-    log "Dumper med safekeeper-imagets pg_dump (klient 18) — samme flagg som backup-entrypoint.sh..."
+    log "Dumper med safekeeper-imagets pg_dump (klient 19) — samme flagg som backup-entrypoint.sh..."
     docker run --rm --network "$NETWORK" \
         -e PGPASSWORD="$DB_PASSWORD" \
         --entrypoint pg_dump \
@@ -153,7 +153,7 @@ run_matrix_for_version() {
     CLEANUP_CONTAINERS+=("$target_container")
     wait_for_pg "$target_container" || return 1
 
-    log "Gjenoppretter med safekeeper-imagets psql --single-transaction (klient 18) — samme flyt som restore.sh, inkludert transaction_timeout-filteret fra #174..."
+    log "Gjenoppretter med safekeeper-imagets psql --single-transaction (klient 19) — samme flyt som restore.sh, inkludert transaction_timeout-filteret fra #174..."
     sed '/^SET transaction_timeout/d' "$dump_file" \
         | docker run --rm -i --network "$NETWORK" \
         -e PGPASSWORD="$DB_PASSWORD" \
@@ -175,7 +175,7 @@ run_matrix_for_version() {
 }
 
 overall_status=0
-for version in "16-alpine" "17-alpine"; do
+for version in "16-alpine" "17-alpine" "18-alpine"; do
     if ! run_matrix_for_version "$version"; then
         overall_status=1
     fi
@@ -183,7 +183,7 @@ for version in "16-alpine" "17-alpine"; do
 done
 
 if [[ $overall_status -eq 0 ]]; then
-    log "Alle matrise-scenarier OK: pg-klient 18 dumper/restorer korrekt mot postgres:16-alpine og postgres:17-alpine."
+    log "Alle matrise-scenarier OK: pg-klient 19 dumper/restorer korrekt mot postgres:16-alpine, postgres:17-alpine og postgres:18-alpine."
 else
     log "Ett eller flere matrise-scenarier FEILET — se output over. IKKE nedgrader baseimage for å fikse dette; rapporter funnet i #133."
 fi
